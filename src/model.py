@@ -37,14 +37,13 @@ def train_xgboost_classifier(
     
     # Default hyperparameters
     default_params = {
-        'n_estimators': 100,
-        'max_depth': 6,
-        'learning_rate': 0.1,
+        'n_estimators': 200,
+        'max_depth': 4,
+        'learning_rate': 0.05,
         'subsample': 0.8,
         'colsample_bytree': 0.8,
         'random_state': random_state,
-        'eval_metric': 'logloss',
-        'use_label_encoder': False
+        'eval_metric': 'logloss'
     }
     
     # Update with user-provided parameters

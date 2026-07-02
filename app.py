@@ -21,7 +21,7 @@ import sys
 # Add src directory to path
 sys.path.append(str(Path(__file__).parent / 'src'))
 
-from src import load_model, initialize_shap_explainer, calculate_shap_values
+from src import load_model
 
 
 # Page configuration
@@ -238,6 +238,8 @@ def preprocess_input(user_inputs, feature_names):
     # Reorder columns to match training data
     input_df = input_df[feature_names]
     
+    # Note: No scaling applied - XGBoost doesn't require feature scaling
+    
     return input_df
 
 
@@ -350,11 +352,19 @@ def display_shap_explanation(model, input_df, feature_names):
         # Calculate SHAP values
         shap_values = explainer.shap_values(input_df)
         
+        # Handle multi-dimensional SHAP values (get positive class)
+        if isinstance(shap_values, list) and len(shap_values) > 1:
+            shap_values = shap_values[1]  # Use positive class SHAP values
+        
+        # Ensure shap_values is 1D for single sample
+        if len(shap_values.shape) > 1:
+            shap_values = shap_values[0]
+        
         # Create feature importance DataFrame
         importance_df = pd.DataFrame({
             'Feature': feature_names,
-            'SHAP Value': shap_values[0],
-            'Impact': ['Increases Risk' if v > 0 else 'Decreases Risk' for v in shap_values[0]]
+            'SHAP Value': shap_values,
+            'Impact': ['Increases Risk' if v > 0 else 'Decreases Risk' for v in shap_values]
         }).sort_values(by='SHAP Value', key=abs, ascending=False)
         
         # Display top 10 features

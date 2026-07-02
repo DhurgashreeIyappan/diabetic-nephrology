@@ -21,7 +21,7 @@ from sklearn.metrics import (
     auc
 )
 from pathlib import Path
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, Optional
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -35,7 +35,7 @@ def calculate_metrics(y_true, y_pred, y_pred_proba) -> Dict[str, float]:
     Args:
         y_true: True labels
         y_pred: Predicted labels
-        y_pred_proba: Predicted probabilities for positive class
+        y_pred_proba: Predicted probabilities for positive class (1D array)
     
     Returns:
         Dictionary containing all evaluation metrics
@@ -44,18 +44,20 @@ def calculate_metrics(y_true, y_pred, y_pred_proba) -> Dict[str, float]:
     
     metrics = {}
     
-    # Basic metrics
+    # Basic metrics (weighted)
     metrics['accuracy'] = accuracy_score(y_true, y_pred)
     metrics['precision'] = precision_score(y_true, y_pred, average='weighted', zero_division=0)
     metrics['recall'] = recall_score(y_true, y_pred, average='weighted', zero_division=0)
     metrics['f1_score'] = f1_score(y_true, y_pred, average='weighted', zero_division=0)
     
-    # ROC-AUC (handle binary and multiclass)
+    # Binary metrics (positive class)
+    metrics['precision_positive'] = precision_score(y_true, y_pred, pos_label=1, zero_division=0)
+    metrics['recall_positive'] = recall_score(y_true, y_pred, pos_label=1, zero_division=0)
+    metrics['f1_positive'] = f1_score(y_true, y_pred, pos_label=1, zero_division=0)
+    
+    # ROC-AUC for binary classification
     try:
-        if len(np.unique(y_true)) == 2:
-            metrics['roc_auc'] = roc_auc_score(y_true, y_pred_proba)
-        else:
-            metrics['roc_auc'] = roc_auc_score(y_true, y_pred_proba, multi_class='ovr', average='weighted')
+        metrics['roc_auc'] = roc_auc_score(y_true, y_pred_proba)
     except Exception as e:
         logger.warning(f"Could not calculate ROC-AUC: {e}")
         metrics['roc_auc'] = None
@@ -92,14 +94,30 @@ def print_metrics(metrics: Dict[str, float]) -> None:
     print("EVALUATION METRICS")
     print("="*60)
     
-    for metric_name, value in metrics.items():
+    # Print weighted metrics
+    print("\nWeighted Metrics:")
+    print("-"*60)
+    for metric_name in ['accuracy', 'precision', 'recall', 'f1_score']:
+        value = metrics.get(metric_name)
         if value is not None:
-            if metric_name == 'roc_auc':
-                print(f"{metric_name.upper():<15}: {value:.4f}")
-            else:
-                print(f"{metric_name.upper():<15}: {value:.4f}")
-        else:
-            print(f"{metric_name.upper():<15}: N/A")
+            print(f"{metric_name.upper():<15}: {value:.4f}")
+    
+    # Print positive class metrics
+    print("\nPositive Class Metrics:")
+    print("-"*60)
+    for metric_name in ['precision_positive', 'recall_positive', 'f1_positive']:
+        value = metrics.get(metric_name)
+        if value is not None:
+            print(f"{metric_name.upper():<15}: {value:.4f}")
+    
+    # Print ROC-AUC
+    print("\nROC-AUC:")
+    print("-"*60)
+    value = metrics.get('roc_auc')
+    if value is not None:
+        print(f"ROC_AUC{' '*8}: {value:.4f}")
+    else:
+        print("ROC_AUC{' '*8}: N/A")
 
 
 def plot_confusion_matrix(
@@ -153,11 +171,11 @@ def plot_roc_curve(
     title: str = "ROC Curve"
 ) -> None:
     """
-    Plot and save ROC curve.
+    Plot and save ROC curve for binary classification.
     
     Args:
         y_true: True labels
-        y_pred_proba: Predicted probabilities for positive class
+        y_pred_proba: Predicted probabilities for positive class (1D array)
         save_path: Path to save the plot
         title: Plot title
     """
@@ -165,36 +183,14 @@ def plot_roc_curve(
     
     plt.figure(figsize=(10, 8))
     
-    # Handle binary classification
-    if len(np.unique(y_true)) == 2:
-        fpr, tpr, _ = roc_curve(y_true, y_pred_proba)
-        roc_auc = auc(fpr, tpr)
-        
-        plt.plot(fpr, tpr, color='darkorange', lw=2, 
-                label=f'ROC Curve (AUC = {roc_auc:.4f})')
-        plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', 
-                label='Random Classifier')
+    # Calculate ROC curve
+    fpr, tpr, _ = roc_curve(y_true, y_pred_proba)
+    roc_auc = auc(fpr, tpr)
     
-    # Handle multiclass (one-vs-rest)
-    else:
-        classes = np.unique(y_true)
-        colors = plt.cm.get_cmap('tab10')(np.linspace(0, 1, len(classes)))
-        
-        for idx, class_label in enumerate(classes):
-            # Create binary labels for this class
-            y_binary = (y_true == class_label).astype(int)
-            
-            try:
-                fpr, tpr, _ = roc_curve(y_binary, y_pred_proba[:, idx])
-                roc_auc = auc(fpr, tpr)
-                
-                plt.plot(fpr, tpr, color=colors[idx], lw=2,
-                        label=f'Class {class_label} (AUC = {roc_auc:.4f})')
-            except:
-                continue
-        
-        plt.plot([0, 1], [0, 1], color='-navy', lw=2, linestyle='--',
-                label='Random Classifier')
+    plt.plot(fpr, tpr, color='darkorange', lw=2, 
+            label=f'ROC Curve (AUC = {roc_auc:.4f})')
+    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--', 
+            label='Random Classifier')
     
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
@@ -242,7 +238,7 @@ def evaluate_model(
     # Make predictions
     logger.info("Making predictions on test set...")
     y_pred = model.predict(X_test)
-    y_pred_proba = model.predict_proba(X_test)
+    y_pred_proba = model.predict_proba(X_test)[:, 1]  # Get positive class probability only
     
     # Calculate metrics
     metrics = calculate_metrics(y_test, y_pred, y_pred_proba)
@@ -285,18 +281,32 @@ def save_evaluation_report(results: Dict[str, Any], report_path: str) -> None:
     
     Path(report_path).parent.mkdir(parents=True, exist_ok=True)
     
-    with open(report_path, 'w') as f:
+    with open(report_path, 'w', encoding='utf-8') as f:
         f.write("="*60 + "\n")
         f.write("MODEL EVALUATION REPORT\n")
         f.write("="*60 + "\n\n")
         
-        f.write("METRICS:\n")
+        f.write("WEIGHTED METRICS:\n")
         f.write("-"*60 + "\n")
-        for metric_name, value in results['metrics'].items():
+        for metric_name in ['accuracy', 'precision', 'recall', 'f1_score']:
+            value = results['metrics'].get(metric_name)
             if value is not None:
                 f.write(f"{metric_name.upper()}: {value:.4f}\n")
-            else:
-                f.write(f"{metric_name.upper()}: N/A\n")
+        
+        f.write("\nPOSITIVE CLASS METRICS:\n")
+        f.write("-"*60 + "\n")
+        for metric_name in ['precision_positive', 'recall_positive', 'f1_positive']:
+            value = results['metrics'].get(metric_name)
+            if value is not None:
+                f.write(f"{metric_name.upper()}: {value:.4f}\n")
+        
+        f.write("\nROC-AUC:\n")
+        f.write("-"*60 + "\n")
+        value = results['metrics'].get('roc_auc')
+        if value is not None:
+            f.write(f"ROC_AUC: {value:.4f}\n")
+        else:
+            f.write("ROC_AUC: N/A\n")
         
         f.write("\n" + "="*60 + "\n")
         f.write("PLOTS:\n")

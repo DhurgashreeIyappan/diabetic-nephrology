@@ -1,0 +1,54 @@
+============================================================
+SHAP ANALYSIS REPORT
+============================================================
+
+EXPLAINER TYPE:
+------------------------------------------------------------
+TreeExplainer
+
+SHAP VALUES SHAPE:
+------------------------------------------------------------
+(153, 21)
+
+GENERATED PLOTS:
+------------------------------------------------------------
+Summary Plot: outputs\plots\shap_summary_plot.png
+Global Feature Importance: outputs\plots\shap_global_feature_importance.png
+Waterfall Plot: outputs\plots\shap_waterfall_plot.png
+Force Plot: outputs\plots\shap_force_plot.png
+
+DEPENDENCE PLOTS:
+------------------------------------------------------------
+SBP (mmHg) : outputs\plots\shap_dependence_SBP (mmHg) .png
+HbA1c (%): outputs\plots\shap_dependence_HbA1c (%).png
+Diabetic retinopathy (DR): outputs\plots\shap_dependence_Diabetic retinopathy (DR).png
+
+============================================================
+PATIENT EXPLANATION
+============================================================
+
+Prediction: -2.0512
+Base Value: 0.2732
+
+TOP FEATURE CONTRIBUTIONS:
+------------------------------------------------------------
+HbA1c (%): -0.5866 (Decreases)
+  Feature Value: 6.5000
+HDLC（mmoll）: -0.4015 (Decreases)
+  Feature Value: 1.3200
+C-peptide (ng/ml）: -0.3977 (Decreases)
+  Feature Value: 0.4900
+LDLC（mmoll）: -0.3905 (Decreases)
+  Feature Value: 2.6600
+Diabetic retinopathy (DR): 0.3387 (Increases)
+  Feature Value: 1.0000
+BMI (kg/m2): -0.2919 (Decreases)
+  Feature Value: 20.0288
+FBG (mmol/L): -0.2842 (Decreases)
+  Feature Value: 4.7100
+TC（mmoll）: -0.2597 (Decreases)
+  Feature Value: 4.4300
+Metformin: 0.2518 (Increases)
+  Feature Value: 0.0000
+Height(cm): -0.1426 (Decreases)
+  Feature Value: 158.0000

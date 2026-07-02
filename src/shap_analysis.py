@@ -51,11 +51,16 @@ def calculate_shap_values(explainer, X_test):
         X_test: Test features
     
     Returns:
-        SHAP values array
+        SHAP values array (for binary classification, returns positive class values)
     """
     logger.info("Calculating SHAP values for test set...")
     
     shap_values = explainer.shap_values(X_test)
+    
+    # Handle multi-dimensional SHAP values for binary classification
+    if isinstance(shap_values, list) and len(shap_values) > 1:
+        logger.info("Multi-dimensional SHAP values detected. Using positive class values.")
+        shap_values = shap_values[1]  # Use positive class SHAP values
     
     logger.info(f"SHAP values calculated. Shape: {np.array(shap_values).shape}")
     return shap_values
@@ -519,7 +524,7 @@ def save_shap_report(results: Dict[str, Any], report_path: str) -> None:
     
     Path(report_path).parent.mkdir(parents=True, exist_ok=True)
     
-    with open(report_path, 'w') as f:
+    with open(report_path, 'w', encoding='utf-8') as f:
         f.write("="*60 + "\n")
         f.write("SHAP ANALYSIS REPORT\n")
         f.write("="*60 + "\n\n")

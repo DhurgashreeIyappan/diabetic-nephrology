@@ -97,7 +97,7 @@ def handle_missing_values(
                 else:
                     fill_value = df_processed[col].mean()
                 
-                df_processed[col].fillna(fill_value, inplace=True)
+                df_processed[col] = df_processed[col].fillna(fill_value)
                 logger.info(f"Filled missing values in '{col}' with {strategy}: {fill_value:.2f}")
             
             else:  # Categorical
@@ -106,7 +106,7 @@ def handle_missing_values(
                 else:
                     fill_value = df_processed[col].mode()[0]
                 
-                df_processed[col].fillna(fill_value, inplace=True)
+                df_processed[col] = df_processed[col].fillna(fill_value)
                 logger.info(f"Filled missing values in '{col}' with mode: {fill_value}")
     
     logger.info(f"Missing value handling complete. Remaining shape: {df_processed.shape}")
@@ -296,7 +296,7 @@ def train_test_split_data(
     Returns:
         Tuple of (X_train, X_test, y_train, y_test)
     """
-    logger.info(f"Performing {test_size*100:.0f}-{(1-test_size)*100:.0f} train-test split")
+    logger.info(f"Performing {(1-test_size)*100:.0f}-{test_size*100:.0f} train-test split")
     
     stratify_param = y if stratify else None
     
@@ -367,7 +367,7 @@ def preprocess_pipeline(
     encode_categorical: bool = True,
     encoding_method: str = 'label',
     handle_imbalance: Optional[str] = None,
-    apply_scaling: bool = True,
+    apply_scaling: bool = False,  # XGBoost doesn't need scaling
     scaling_method: str = 'standard',
     test_size: float = 0.2,
     random_state: int = 42

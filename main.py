@@ -63,7 +63,7 @@ def main():
         encode_categorical=True,
         encoding_method='label',
         handle_imbalance=None,  # Set to 'oversample' or 'undersample' if needed
-        apply_scaling=True,
+        apply_scaling=False,  # XGBoost doesn't need scaling
         scaling_method='standard',
         test_size=0.2,
         random_state=42
@@ -80,16 +80,23 @@ def main():
     print(f"Testing set: {X_test.shape}")
     print(f"Unique Values (After Encoding): {y_train.unique()}")
     
+    # Calculate class imbalance for scale_pos_weight
+    class_counts = y_train.value_counts()
+    scale_pos_weight = class_counts[0] / class_counts[1] if len(class_counts) == 2 else 1
+    print(f"Class distribution: {class_counts.to_dict()}")
+    print(f"Scale pos weight: {scale_pos_weight:.2f}")
+    
     # Step 3: Train XGBoost model
     print("\n[Step 3/5] Training XGBoost model...")
     
     # Optional: Customize XGBoost parameters
     xgb_params = {
-        'n_estimators': 100,
-        'max_depth': 6,
-        'learning_rate': 0.1,
+        'n_estimators': 200,
+        'max_depth': 4,
+        'learning_rate': 0.05,
         'subsample': 0.8,
-        'colsample_bytree': 0.8
+        'colsample_bytree': 0.8,
+        'scale_pos_weight': scale_pos_weight  # Handle class imbalance
     }
     
     model = train_xgboost_classifier(

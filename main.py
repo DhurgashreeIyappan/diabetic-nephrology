@@ -38,7 +38,7 @@ def main():
     
     # Configuration
     DATASET_PATH = 'dataset/Diabetic_Nephropathy_v1.xlsx'
-    TARGET_COLUMN = 'diabetic_nephropathy'  # Update with your target column
+    TARGET_COLUMN = 'Diabetic nephropathy (DN)'  # Target column from dataset
     MODELS_DIR = 'models'
     PLOTS_DIR = 'outputs/plots'
     REPORTS_DIR = 'outputs/reports'
@@ -48,6 +48,11 @@ def main():
     print("\n[Step 1/5] Loading dataset...")
     df = load_dataset(DATASET_PATH)
     print(f"Dataset loaded: {df.shape}")
+    
+    # Print target column information
+    print(f"\nTarget Column: {TARGET_COLUMN}")
+    print(f"Unique Values (Before Encoding): {df[TARGET_COLUMN].unique()}")
+    print(f"Value Counts:\n{df[TARGET_COLUMN].value_counts()}")
     
     # Step 2: Preprocess data
     print("\n[Step 2/5] Preprocessing data...")
@@ -73,6 +78,7 @@ def main():
     
     print(f"Training set: {X_train.shape}")
     print(f"Testing set: {X_test.shape}")
+    print(f"Unique Values (After Encoding): {y_train.unique()}")
     
     # Step 3: Train XGBoost model
     print("\n[Step 3/5] Training XGBoost model...")

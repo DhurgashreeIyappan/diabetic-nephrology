@@ -93,28 +93,23 @@ def load_feature_names():
     Load feature names from the preprocessing artifacts.
     This is a placeholder - in production, load from saved artifacts.
     """
-    # TODO: Load actual feature names from saved preprocessing artifacts
-    # For now, return common clinical features for diabetic nephropathy
-    common_features = [
-        'age',
-        'gender',
-        'diabetes_duration',
-        'hba1c',
-        'fasting_glucose',
-        'blood_pressure_systolic',
-        'blood_pressure_diastolic',
-        'bmi',
-        'creatinine',
-        'egfr',
-        'albuminuria',
-        'cholesterol_total',
-        'cholesterol_ldl',
-        'cholesterol_hdl',
-        'triglycerides',
-        'smoking_status',
-        'family_history'
+    # Actual feature names from the dataset
+    actual_features = [
+        'Sex',
+        'Age',
+        'Diabetes duration (y)',
+        'Diabetic retinopathy (DR)',
+        'Smoking',
+        'Drinking',
+        'Height(cm)',
+        'Weight(kg)',
+        'BMI (kg/m2)',
+        'SBP (mmHg) ',
+        'DBP (mmHg)',
+        'HbA1c (%)',
+        'FBG (mmol/L)'
     ]
-    return common_features
+    return actual_features
 
 
 def create_input_fields(feature_names):
@@ -138,28 +133,34 @@ def create_input_fields(feature_names):
     with col1:
         for idx, feature in enumerate(feature_names[:len(feature_names)//2]):
             # Determine input type based on feature name
-            if 'gender' in feature.lower():
+            if 'Sex' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature.replace('_', ' ').title()}",
+                    f"{feature}",
                     options=['Male', 'Female'],
                     key=f"input_{feature}"
                 )
-            elif 'smoking' in feature.lower():
+            elif 'Smoking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature.replace('_', ' ').title()}",
-                    options=['Non-smoker', 'Former smoker', 'Current smoker'],
+                    f"{feature}",
+                    options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
-            elif 'family_history' in feature.lower():
+            elif 'Drinking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature.replace('_', ' ').title()}",
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'DR' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             else:
                 # Default to numeric input
                 user_inputs[feature] = st.number_input(
-                    f"{feature.replace('_', ' ').title()}",
+                    f"{feature}",
                     value=0.0,
                     step=0.1,
                     key=f"input_{feature}"
@@ -167,27 +168,33 @@ def create_input_fields(feature_names):
     
     with col2:
         for idx, feature in enumerate(feature_names[len(feature_names)//2:]):
-            if 'gender' in feature.lower():
+            if 'Sex' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature.replace('_', ' ').title()}",
+                    f"{feature}",
                     options=['Male', 'Female'],
                     key=f"input_{feature}"
                 )
-            elif 'smoking' in feature.lower():
+            elif 'Smoking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature.replace('_', ' ').title()}",
-                    options=['Non-smoker', 'Former smoker', 'Current smoker'],
+                    f"{feature}",
+                    options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
-            elif 'family_history' in feature.lower():
+            elif 'Drinking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature.replace('_', ' ').title()}",
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'DR' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             else:
                 user_inputs[feature] = st.number_input(
-                    f"{feature.replace('_', ' ').title()}",
+                    f"{feature}",
                     value=0.0,
                     step=0.1,
                     key=f"input_{feature}"
@@ -216,15 +223,13 @@ def preprocess_input(user_inputs, feature_names):
     for col in input_df.columns:
         if input_df[col].dtype == 'object':
             # Simple label encoding for demo
-            if input_df[col].iloc[0] in ['Male', 'Female']:
+            if 'Sex' in col:
                 input_df[col] = input_df[col].map({'Male': 1, 'Female': 0})
-            elif input_df[col].iloc[0] in ['Non-smoker', 'Former smoker', 'Current smoker']:
-                input_df[col] = input_df[col].map({
-                    'Non-smoker': 0,
-                    'Former smoker': 1,
-                    'Current smoker': 2
-                })
-            elif input_df[col].iloc[0] in ['No', 'Yes']:
+            elif 'Smoking' in col:
+                input_df[col] = input_df[col].map({'No': 0, 'Yes': 1})
+            elif 'Drinking' in col:
+                input_df[col] = input_df[col].map({'No': 0, 'Yes': 1})
+            elif 'DR' in col:
                 input_df[col] = input_df[col].map({'No': 0, 'Yes': 1})
     
     # Ensure all columns are numeric

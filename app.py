@@ -87,29 +87,18 @@ def load_trained_model():
         return None
 
 
-@st.cache_resource
-def load_feature_names():
+def load_feature_names(model):
     """
-    Load feature names from the preprocessing artifacts.
-    This is a placeholder - in production, load from saved artifacts.
+    Load feature names from the trained model.
+    This ensures exact match with what the model was trained on.
+    
+    Args:
+        model: Trained XGBoost model
+    
+    Returns:
+        List of feature names
     """
-    # Actual feature names from the dataset
-    actual_features = [
-        'Sex',
-        'Age',
-        'Diabetes duration (y)',
-        'Diabetic retinopathy (DR)',
-        'Smoking',
-        'Drinking',
-        'Height(cm)',
-        'Weight(kg)',
-        'BMI (kg/m2)',
-        'SBP (mmHg) ',
-        'DBP (mmHg)',
-        'HbA1c (%)',
-        'FBG (mmol/L)'
-    ]
-    return actual_features
+    return list(model.feature_names_in_)
 
 
 def create_input_fields(feature_names):
@@ -127,11 +116,14 @@ def create_input_fields(feature_names):
     st.markdown('<div class="sub-header">Patient Clinical Information</div>', 
                 unsafe_allow_html=True)
     
-    # Create columns for better layout
-    col1, col2 = st.columns(2)
+    # Create columns for better layout (3 columns for 21 features)
+    col1, col2, col3 = st.columns(3)
+    
+    # Split features into 3 groups
+    features_per_col = len(feature_names) // 3
     
     with col1:
-        for idx, feature in enumerate(feature_names[:len(feature_names)//2]):
+        for idx, feature in enumerate(feature_names[:features_per_col]):
             # Determine input type based on feature name
             if 'Sex' in feature:
                 user_inputs[feature] = st.selectbox(
@@ -157,6 +149,24 @@ def create_input_fields(feature_names):
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
+            elif 'Metformin' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Lipid lowering drugs' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Insulin' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
             else:
                 # Default to numeric input
                 user_inputs[feature] = st.number_input(
@@ -167,7 +177,7 @@ def create_input_fields(feature_names):
                 )
     
     with col2:
-        for idx, feature in enumerate(feature_names[len(feature_names)//2:]):
+        for idx, feature in enumerate(feature_names[features_per_col:2*features_per_col]):
             if 'Sex' in feature:
                 user_inputs[feature] = st.selectbox(
                     f"{feature}",
@@ -187,6 +197,76 @@ def create_input_fields(feature_names):
                     key=f"input_{feature}"
                 )
             elif 'DR' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Metformin' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Lipid lowering drugs' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Insulin' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            else:
+                user_inputs[feature] = st.number_input(
+                    f"{feature}",
+                    value=0.0,
+                    step=0.1,
+                    key=f"input_{feature}"
+                )
+    
+    with col3:
+        for idx, feature in enumerate(feature_names[2*features_per_col:]):
+            if 'Sex' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['Male', 'Female'],
+                    key=f"input_{feature}"
+                )
+            elif 'Smoking' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Drinking' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'DR' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Metformin' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Lipid lowering drugs' in feature:
+                user_inputs[feature] = st.selectbox(
+                    f"{feature}",
+                    options=['No', 'Yes'],
+                    key=f"input_{feature}"
+                )
+            elif 'Insulin' in feature:
                 user_inputs[feature] = st.selectbox(
                     f"{feature}",
                     options=['No', 'Yes'],
@@ -231,6 +311,12 @@ def preprocess_input(user_inputs, feature_names):
                 input_df[col] = input_df[col].map({'No': 0, 'Yes': 1})
             elif 'DR' in col:
                 input_df[col] = input_df[col].map({'No': 0, 'Yes': 1})
+            elif 'Metformin' in col:
+                input_df[col] = input_df[col].map({'No': 0, 'Yes': 1})
+            elif 'Lipid lowering drugs' in col:
+                input_df[col] = input_df[col].map({'No': 0, 'Yes': 1})
+            elif 'Insulin' in col:
+                input_df[col] = input_df[col].map({'No': 0, 'Yes': 1})
     
     # Ensure all columns are numeric
     input_df = input_df.astype(float)
@@ -254,6 +340,19 @@ def make_prediction(model, input_df):
     Returns:
         Tuple of (prediction, probability)
     """
+    # Validate feature names match model
+    model_features = list(model.feature_names_in_)
+    input_features = list(input_df.columns)
+    
+    if model_features != input_features:
+        raise ValueError(
+            f"Feature names mismatch.\n"
+            f"Model expects: {model_features}\n"
+            f"Input has: {input_features}\n"
+            f"Missing features: {set(model_features) - set(input_features)}\n"
+            f"Extra features: {set(input_features) - set(model_features)}"
+        )
+    
     # Make prediction
     prediction = model.predict(input_df)[0]
     
@@ -430,8 +529,10 @@ def main():
         st.error("Model could not be loaded. Please ensure the model file exists in the 'models' directory.")
         st.stop()
     
-    # Load feature names
-    feature_names = load_feature_names()
+    # Load feature names from model (ensures exact match)
+    feature_names = load_feature_names(model)
+    
+    st.info(f"Model loaded successfully with {len(feature_names)} features")
     
     # Create input fields
     user_inputs = create_input_fields(feature_names)
@@ -443,19 +544,26 @@ def main():
     if predict_button:
         # Show loading spinner
         with st.spinner("Processing prediction..."):
-            # Preprocess input
-            input_df = preprocess_input(user_inputs, feature_names)
-            
-            # Make prediction
-            prediction, probability = make_prediction(model, input_df)
-            
-            # Display results
-            st.markdown("---")
-            display_prediction_result(prediction, probability)
-            
-            # Display SHAP explanation
-            st.markdown("---")
-            display_shap_explanation(model, input_df, feature_names)
+            try:
+                # Preprocess input
+                input_df = preprocess_input(user_inputs, feature_names)
+                
+                # Make prediction
+                prediction, probability = make_prediction(model, input_df)
+                
+                # Display results
+                st.markdown("---")
+                display_prediction_result(prediction, probability)
+                
+                # Display SHAP explanation
+                st.markdown("---")
+                display_shap_explanation(model, input_df, feature_names)
+            except ValueError as e:
+                st.error(f"Prediction Error: {e}")
+                st.info("Please ensure all required features are provided and match the model's expected input.")
+            except Exception as e:
+                st.error(f"An unexpected error occurred: {e}")
+                st.info("Please check your input values and try again.")
     
     # Footer
     st.markdown("---")

@@ -32,22 +32,25 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for clean UI
+# Custom CSS for clean UI and high text readability
 st.markdown("""
 <style>
+    /* Header styling with automatic contrast adjustment based on theme text color */
     .main-header {
         font-size: 2.5rem;
         font-weight: bold;
-        color: #2c3e50;
+        color: var(--text-color, #1a252f) !important;
         text-align: center;
         padding: 2rem 0;
     }
     .sub-header {
         font-size: 1.5rem;
         font-weight: 600;
-        color: #34495e;
+        color: var(--text-color, #2c3e50) !important;
         padding: 1rem 0;
     }
+    
+    /* Box styles with explicit high-contrast text colors on light background boxes */
     .success-box {
         background-color: #d4edda;
         border: 1px solid #c3e6cb;
@@ -55,6 +58,12 @@ st.markdown("""
         padding: 1rem;
         margin: 1rem 0;
     }
+    .success-box, 
+    .success-box h1, .success-box h2, .success-box h3, .success-box h4, .success-box h5, .success-box h6,
+    .success-box p, .success-box span, .success-box li, .success-box strong {
+        color: #155724 !important;
+    }
+    
     .warning-box {
         background-color: #fff3cd;
         border: 1px solid #ffeaa7;
@@ -62,6 +71,12 @@ st.markdown("""
         padding: 1rem;
         margin: 1rem 0;
     }
+    .warning-box, 
+    .warning-box h1, .warning-box h2, .warning-box h3, .warning-box h4, .warning-box h5, .warning-box h6,
+    .warning-box p, .warning-box span, .warning-box li, .warning-box strong {
+        color: #856404 !important;
+    }
+    
     .info-box {
         background-color: #d1ecf1;
         border: 1px solid #bee5eb;
@@ -69,8 +84,297 @@ st.markdown("""
         padding: 1rem;
         margin: 1rem 0;
     }
+    .info-box, 
+    .info-box h1, .info-box h2, .info-box h3, .info-box h4, .info-box h5, .info-box h6,
+    .info-box p, .info-box span, .info-box li, .info-box strong {
+        color: #0c5460 !important;
+    }
+
+    /* General label readability and contrast */
+    label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] span {
+        color: var(--text-color, #1a252f) !important;
+        font-weight: 500 !important;
+    }
+    
+    /* Input field readability and contrast */
+    .stNumberInput input, .stTextInput input, input {
+        color: var(--text-color, #1a252f) !important;
+    }
+    
+    /* Selectbox list items/options contrast */
+    div[data-baseweb="select"] *, div[role="listbox"] *, .stSelectbox * {
+        color: var(--text-color, #1a252f);
+    }
+    
+    /* Table / dataframe text and headers contrast */
+    table, th, td, tr, [data-testid="stTable"] * {
+        color: var(--text-color, #1a252f) !important;
+    }
+    [data-testid="stDataFrame"] * {
+        color: var(--text-color, #1a252f) !important;
+    }
+    
+    /* Markdown text contrast outside of custom alert boxes */
+    div[data-testid="stMarkdownContainer"] p, 
+    div[data-testid="stMarkdownContainer"] li,
+    div[data-testid="stMarkdownContainer"] ul,
+    div[data-testid="stMarkdownContainer"] ol,
+    div[data-testid="stMarkdownContainer"] span,
+    div[data-testid="stMarkdownContainer"] strong {
+        color: var(--text-color, #1a252f);
+    }
+    
+    /* Explicit exclusion to ensure custom boxes text color isn't overridden by markdown styles */
+    .success-box p, .success-box span, .success-box li, .success-box strong,
+    .warning-box p, .warning-box span, .warning-box li, .warning-box strong,
+    .info-box p, .info-box span, .info-box li, .info-box strong {
+        color: inherit !important;
+    }
+    
+    /* Native notification message readability */
+    [data-testid="stNotification"] p, [data-testid="stNotification"] span, [data-testid="stNotification"] * {
+        color: var(--text-color, #1a252f) !important;
+    }
+
+    /* Footer visibility */
+    .footer-container {
+        text-align: center;
+        color: var(--text-color, #7f8c8d) !important;
+        opacity: 0.85;
+        padding: 2rem 0;
+    }
+    .footer-container p {
+        color: var(--text-color, #7f8c8d) !important;
+    }
+
+    /* Dashboard card styling */
+    .dashboard-card {
+        background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.05));
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+        border-radius: 10px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    .dashboard-card h3, .dashboard-card h4 {
+        margin-top: 0 !important;
+        font-weight: 700 !important;
+        color: var(--text-color, #1a252f) !important;
+    }
+    
+    /* Badges */
+    .badge {
+        display: inline-block;
+        padding: 0.35em 0.65em;
+        font-size: 0.9em;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.25rem;
+        margin-left: 0.5rem;
+    }
+    .badge-low {
+        background-color: #2ecc71 !important;
+        color: #ffffff !important;
+    }
+    .badge-mod {
+        background-color: #f39c12 !important;
+        color: #ffffff !important;
+    }
+    .badge-high {
+        background-color: #e74c3c !important;
+        color: #ffffff !important;
+    }
+
+    /* Danger alert box for high-risk warnings */
+    .danger-box {
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 5px;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    .danger-box, 
+    .danger-box h1, .danger-box h2, .danger-box h3, .danger-box h4, .danger-box h5, .danger-box h6,
+    .danger-box p, .danger-box span, .danger-box li, .danger-box strong {
+        color: #721c24 !important;
+    }
+
+    /* Clean white background container with light border and rounded corners for the probability chart */
+    .probability-chart-container [data-testid="stPlotlyChart"] {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+        padding: 1.25rem !important;
+    }
+
+    /* Clean white background container with light border and rounded corners for the SHAP chart */
+    .shap-chart-container [data-testid="stPlotlyChart"] {
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+        padding: 1.25rem !important;
+    }
+
+    /* SHAP Summary Card Styling */
+    .shap-summary-card {
+        border-left: 5px solid #3b82f6 !important;
+        background-color: #f8fafc !important;
+        border-top: 1px solid #cbd5e1 !important;
+        border-right: 1px solid #cbd5e1 !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        border-radius: 4px 8px 8px 4px !important;
+        padding: 1.5rem !important;
+        margin: 1.5rem 0 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+    }
+    .shap-summary-card h4 {
+        margin: 0 0 1rem 0 !important;
+        font-weight: bold !important;
+        color: #0f172a !important;
+    }
+    .shap-summary-list {
+        list-style-type: none !important;
+        padding-left: 0 !important;
+        margin-bottom: 0 !important;
+    }
+    .shap-summary-list li {
+        display: flex !important;
+        justify-content: space-between !important;
+        padding: 0.6rem 0 !important;
+        border-bottom: 1px dashed #cbd5e1 !important;
+        color: #1e293b !important;
+    }
+    .shap-summary-list li:last-child {
+        border-bottom: none !important;
+        padding-bottom: 0 !important;
+    }
+    .shap-summary-label {
+        font-weight: bold !important;
+        color: #475569 !important;
+    }
+    .shap-summary-value {
+        font-weight: bold !important;
+        color: #0f172a !important;
+    }
+
+    /* Detailed Feature Contributions HTML Table Styling */
+    .shap-table-container {
+        border-radius: 12px !important;
+        overflow: hidden !important;
+        border: 1px solid #cbd5e1 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+        margin: 1.5rem 0 !important;
+        background-color: #ffffff !important;
+        padding: 0 !important;
+    }
+    .shap-html-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        text-align: left !important;
+        margin: 0 !important;
+    }
+    .shap-html-table th {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+        font-weight: bold !important;
+        padding: 12px 18px !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+        font-size: 0.95rem !important;
+    }
+    .shap-html-table td {
+        padding: 12px 18px !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        color: #334155 !important;
+        font-size: 0.92rem !important;
+    }
+    .shap-html-table tr:last-child td {
+        border-bottom: none !important;
+    }
+    /* Zebra Striping */
+    .shap-html-table tr:nth-child(even) {
+        background-color: #f8fafc !important;
+    }
+    .shap-html-table tr:nth-child(odd) {
+        background-color: #ffffff !important;
+    }
+    /* Hover highlighting */
+    .shap-html-table tr:hover {
+        background-color: #f1f5f9 !important;
+    }
+
+    /* Patient Info Card styling */
+    .patient-info-card {
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 12px !important;
+        padding: 2rem !important;
+        margin: 1.5rem 0 !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+    }
+    
+    /* Input field spacing & aesthetics inside info card */
+    .patient-info-card div[data-testid="element-container"] {
+        margin-bottom: 1.25rem !important;
+    }
+    .patient-info-card div[data-testid="column"] {
+        padding: 0 1.25rem !important;
+    }
+    
+    /* Make input labels bold, dark slate, consistent font size */
+    .patient-info-card label, 
+    .patient-info-card [data-testid="stWidgetLabel"] p, 
+    .patient-info-card [data-testid="stWidgetLabel"] span {
+        color: #1e293b !important;
+        font-weight: bold !important;
+        font-size: 0.95rem !important;
+    }
+    
+    /* Add a small red asterisk (*) beside required fields */
+    .patient-info-card label[data-testid="stWidgetLabel"]::after, 
+    .patient-info-card [data-testid="stWidgetLabel"] p::after {
+        content: " *" !important;
+        color: #e74c3c !important;
+        font-weight: bold !important;
+        margin-left: 2px !important;
+    }
+    
+    /* Custom inputs style and focus glow border */
+    .patient-info-card input, 
+    .patient-info-card select, 
+    .patient-info-card div[role="combobox"] {
+        height: 42px !important;
+        border-radius: 8px !important;
+        border: 1px solid #cbd5e1 !important;
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+        transition: border-color 0.2s, box-shadow 0.2s !important;
+    }
+    .patient-info-card input:focus, 
+    .patient-info-card select:focus, 
+    .patient-info-card div[role="combobox"]:focus-within {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
+        outline: none !important;
+    }
+    
+    /* Section heading styling inside card */
+    .patient-info-card .sub-header {
+        font-size: 1.6rem !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        margin-top: 0 !important;
+        margin-bottom: 1.5rem !important;
+        border-bottom: 2px solid #cbd5e1 !important;
+        padding-bottom: 0.75rem !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
 
 
 @st.cache_resource
@@ -113,6 +417,27 @@ def create_input_fields(feature_names):
     """
     user_inputs = {}
     
+    # Define measurement units mapping
+    FEATURE_DISPLAY_MAP = {
+        'Age': 'Age (years)',
+        'Diabetes duration (y)': 'Diabetes duration (years)',
+        'HbA1c': 'HbA1c (%)',
+        'SBP': 'SBP (mmHg)',
+        'DBP': 'DBP (mmHg)',
+        'Serum creatinine': 'Serum creatinine (mg/dL)',
+        'eGFR': 'eGFR (mL/min/1.73m²)',
+        'UACR': 'UACR (mg/g)',
+        'BMI': 'BMI (kg/m²)',
+        'Cholesterol': 'Cholesterol (mg/dL)',
+        'Triglycerides': 'Triglycerides (mg/dL)',
+        'HDL': 'HDL (mg/dL)',
+        'LDL': 'LDL (mg/dL)',
+        'Weight': 'Weight (kg)',
+        'Height': 'Height (cm)'
+    }
+    
+    # Wrap clinical information form inside a clean card
+    st.markdown('<div class="patient-info-card">', unsafe_allow_html=True)
     st.markdown('<div class="sub-header">Patient Clinical Information</div>', 
                 unsafe_allow_html=True)
     
@@ -124,53 +449,52 @@ def create_input_fields(feature_names):
     
     with col1:
         for idx, feature in enumerate(feature_names[:features_per_col]):
-            # Determine input type based on feature name
+            display_label = FEATURE_DISPLAY_MAP.get(feature, feature)
             if 'Sex' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['Male', 'Female'],
                     key=f"input_{feature}"
                 )
             elif 'Smoking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Drinking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'DR' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Metformin' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Lipid lowering drugs' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Insulin' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             else:
-                # Default to numeric input
                 user_inputs[feature] = st.number_input(
-                    f"{feature}",
+                    f"{display_label}",
                     value=0.0,
                     step=0.1,
                     key=f"input_{feature}"
@@ -178,51 +502,52 @@ def create_input_fields(feature_names):
     
     with col2:
         for idx, feature in enumerate(feature_names[features_per_col:2*features_per_col]):
+            display_label = FEATURE_DISPLAY_MAP.get(feature, feature)
             if 'Sex' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['Male', 'Female'],
                     key=f"input_{feature}"
                 )
             elif 'Smoking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Drinking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'DR' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Metformin' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Lipid lowering drugs' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Insulin' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             else:
                 user_inputs[feature] = st.number_input(
-                    f"{feature}",
+                    f"{display_label}",
                     value=0.0,
                     step=0.1,
                     key=f"input_{feature}"
@@ -230,56 +555,58 @@ def create_input_fields(feature_names):
     
     with col3:
         for idx, feature in enumerate(feature_names[2*features_per_col:]):
+            display_label = FEATURE_DISPLAY_MAP.get(feature, feature)
             if 'Sex' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['Male', 'Female'],
                     key=f"input_{feature}"
                 )
             elif 'Smoking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Drinking' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'DR' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Metformin' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Lipid lowering drugs' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             elif 'Insulin' in feature:
                 user_inputs[feature] = st.selectbox(
-                    f"{feature}",
+                    f"{display_label}",
                     options=['No', 'Yes'],
                     key=f"input_{feature}"
                 )
             else:
                 user_inputs[feature] = st.number_input(
-                    f"{feature}",
+                    f"{display_label}",
                     value=0.0,
                     step=0.1,
                     key=f"input_{feature}"
                 )
-    
+                
+    st.markdown('</div>', unsafe_allow_html=True)
     return user_inputs
 
 
@@ -362,18 +689,89 @@ def make_prediction(model, input_df):
     return prediction, probability
 
 
-def display_prediction_result(prediction, probability):
+def display_prediction_result(prediction, probability, user_inputs=None):
     """
-    Display prediction result and probability.
+    Display prediction result, probability, and clinical insights.
     
     Args:
         prediction: Predicted class
         probability: Prediction probabilities
+        user_inputs: Dictionary of user inputs
     """
-    st.markdown('<div class="sub-header">Prediction Result</div>', 
-                unsafe_allow_html=True)
+    import datetime
     
-    # Display prediction
+    # Calculate risk category and recommendations
+    high_risk_prob = probability[1]
+    if high_risk_prob < 0.35:
+        risk_level = "Low Risk"
+        risk_badge = '<span class="badge badge-low">✅ Low Risk</span>'
+        confidence = probability[0]
+        recommendation_class = "success-box"
+        recommendation_text = (
+            "<ul>"
+            "<li><strong>Glycemic Control:</strong> Maintain routine monitoring (target HbA1c &lt; 7.0%).</li>"
+            "<li><strong>Blood Pressure:</strong> Keep blood pressure stable (target &lt; 130/80 mmHg).</li>"
+            "<li><strong>Screening:</strong> Schedule routine annual microalbuminuria screening (UACR) and kidney function tests (eGFR).</li>"
+            "<li><strong>Lifestyle:</strong> Continue with a balanced diabetic diet and regular exercise.</li>"
+            "</ul>"
+        )
+    elif high_risk_prob <= 0.65:
+        risk_level = "Moderate Risk"
+        risk_badge = '<span class="badge badge-mod">⚠️ Moderate Risk</span>'
+        confidence = high_risk_prob if high_risk_prob > 0.5 else probability[0]
+        recommendation_class = "warning-box"
+        recommendation_text = (
+            "<ul>"
+            "<li><strong>Therapy Review:</strong> Discuss with your clinician about initiating or optimizing kidney-protective therapies (e.g., SGLT2 inhibitors or GLP-1 receptor agonists).</li>"
+            "<li><strong>BP Control:</strong> Consider ACE inhibitors (ACEi) or Angiotensin Receptor Blockers (ARBs) if hypertension or borderline proteinuria is present.</li>"
+            "<li><strong>Monitoring:</strong> Retest kidney function (eGFR and UACR) in 6 months.</li>"
+            "<li><strong>Cardiovascular Risk:</strong> Check lipid profile and optimize treatment.</li>"
+            "</ul>"
+        )
+    else:
+        risk_level = "High Risk"
+        risk_badge = '<span class="badge badge-high">🚨 High Risk</span>'
+        confidence = high_risk_prob
+        recommendation_class = "danger-box"
+        recommendation_text = (
+            "<ul>"
+            "<li><strong>Specialist Referral:</strong> Prompt consultation with a nephrologist for detailed diagnostic evaluation and therapeutic planning.</li>"
+            "<li><strong>Medication Optimization:</strong> Initiate or maximize doses of kidney-protective therapies (e.g., SGLT2 inhibitors and ACEi/ARBs) as tolerated.</li>"
+            "<li><strong>Intensive Monitoring:</strong> Monitor eGFR and UACR within 3 months, and keep a daily blood pressure log.</li>"
+            "<li><strong>Dietary Adjustments:</strong> Consider consultations with a renal dietitian to manage sodium and protein intake.</li>"
+            "</ul>"
+        )
+
+    # Prediction time
+    pred_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    st.markdown('<div class="sub-header">🩺 Prediction Analysis & Clinical Summary</div>', 
+                unsafe_allow_html=True)
+
+    # 1. Prediction Summary Dashboard Card
+    st.markdown(f"""<div class="dashboard-card">
+<h4 style="margin: 0 0 1rem 0; font-weight: bold; color: var(--text-color, #1a252f);">📊 Prediction Summary Dashboard</h4>
+<div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: space-between; align-items: center;">
+<div style="flex: 1; min-width: 150px;">
+<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Model Name</p>
+<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color, #1a252f);">⚡ XGBoost Classifier</p>
+</div>
+<div style="flex: 1; min-width: 150px;">
+<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Analysis Timestamp</p>
+<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color, #1a252f);">📅 {pred_time}</p>
+</div>
+<div style="flex: 1; min-width: 150px;">
+<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Risk Category</p>
+<p style="margin: 0; font-size: 1.1rem; font-weight: bold;">{risk_badge}</p>
+</div>
+<div style="flex: 1; min-width: 150px;">
+<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Model Confidence</p>
+<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color, #1a252f);">🎯 {confidence:.2%}</p>
+</div>
+</div>
+</div>""", unsafe_allow_html=True)
+
+    # 2. Existing Prediction Result card (Keep exactly as required)
     if prediction == 1:
         st.markdown("""
         <div class="warning-box">
@@ -388,36 +786,125 @@ def display_prediction_result(prediction, probability):
             <p>The model predicts that this patient is at <strong>low risk</strong> of developing diabetic nephropathy.</p>
             </div>
         """, unsafe_allow_html=True)
+
+    # 3. Clinical Recommendation Card
+    st.markdown(f"""<div class="{recommendation_class}">
+<h4 style="margin: 0 0 0.5rem 0; font-weight: bold;">🩺 Clinical Recommendations for {risk_level}</h4>
+{recommendation_text}
+</div>""", unsafe_allow_html=True)
     
-    # Display probability
+    st.markdown("---")
+
+    # 4. Existing Probability Chart (Enhanced with medical dashboard styling)
     st.markdown('<div class="sub-header">Prediction Probability</div>', 
                 unsafe_allow_html=True)
     
-    # Create probability bar chart
-    prob_df = pd.DataFrame({
-        'Class': ['Low Risk', 'High Risk'],
-        'Probability': probability
-    })
+    # Render Plotly Chart inside probability-chart-container for CSS targeting
+    st.markdown('<div class="probability-chart-container">', unsafe_allow_html=True)
     
-    fig = go.Figure(data=[
-        go.Bar(
-            x=prob_df['Class'],
-            y=prob_df['Probability'],
-            marker_color=['#2ecc71', '#e74c3c'],
-            text=[f"{p:.2%}" for p in prob_df['Probability']],
-            textposition='auto'
-        )
-    ])
+    fig = go.Figure()
+    
+    # Add trace for Low Risk
+    fig.add_trace(go.Bar(
+        name='Low Risk',
+        x=['Low Risk'],
+        y=[probability[0]],
+        marker=dict(
+            color='#2ecc71',
+            cornerradius=15,
+            line=dict(width=1.5, color='#27ae60')
+        ),
+        text=[f"<b>{probability[0]:.2%}</b>"],
+        textposition='outside',
+        textfont=dict(size=16, family="Arial, sans-serif"),
+        hovertemplate="<b>Low Risk</b><br>Probability: %{y:.4f} (%{y:.2%})<extra></extra>"
+    ))
+    
+    # Add trace for High Risk
+    fig.add_trace(go.Bar(
+        name='High Risk',
+        x=['High Risk'],
+        y=[probability[1]],
+        marker=dict(
+            color='#e74c3c',
+            cornerradius=15,
+            line=dict(width=1.5, color='#c0392b')
+        ),
+        text=[f"<b>{probability[1]:.2%}</b>"],
+        textposition='outside',
+        textfont=dict(size=16, family="Arial, sans-serif"),
+        hovertemplate="<b>High Risk</b><br>Probability: %{y:.4f} (%{y:.2%})<extra></extra>"
+    ))
     
     fig.update_layout(
-        title="Prediction Probability Distribution",
-        yaxis_title="Probability",
-        yaxis_range=[0, 1],
-        showlegend=False,
-        height=400
+        title=dict(
+            text="<b>Prediction Probability Distribution</b>",
+            font=dict(size=20, color='#1e293b', family="Arial, sans-serif"),
+            x=0.5,
+            xanchor='center'
+        ),
+        xaxis=dict(
+            title=dict(font=dict(size=14, color='#1e293b')),
+            tickfont=dict(size=14, color='#1e293b', family="Arial, sans-serif"),
+            showline=True,
+            linewidth=1,
+            linecolor='#cbd5e1'
+        ),
+        yaxis=dict(
+            title=dict(text="<b>Probability</b>", font=dict(size=14, color='#1e293b')),
+            tickfont=dict(size=14, color='#1e293b'),
+            range=[0, 1.15], # buffer on top to prevent text label clipping
+            showgrid=True,
+            gridcolor='#e2e8f0',
+            gridwidth=1,
+            showline=True,
+            linewidth=1,
+            linecolor='#cbd5e1'
+        ),
+        legend=dict(
+            title=dict(text="<b>Risk Class</b>", font=dict(size=12, color='#1e293b')),
+            font=dict(size=12, color='#1e293b'),
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1
+        ),
+        paper_bgcolor='#ffffff',
+        plot_bgcolor='#ffffff',
+        height=500,
+        margin=dict(l=60, r=40, t=100, b=60),
+        bargap=0.4
     )
     
     st.plotly_chart(fig, use_container_width=True)
+    
+    # Caption below the chart
+    st.markdown('<p style="text-align: center; font-size: 0.92rem; color: #7f8c8d; margin-top: 0.5rem; font-style: italic;">Prediction probabilities generated by the trained XGBoost model.</p>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # 5. Patient Summary Section (Entered values in a clean table)
+    if user_inputs:
+        st.markdown("---")
+        st.markdown('<div class="sub-header">📋 Patient Clinical Profile Summary</div>', 
+                    unsafe_allow_html=True)
+        
+        summary_data = []
+        for metric, val in user_inputs.items():
+            if isinstance(val, float):
+                formatted_val = f"{val:.2f}" if val % 1 != 0 else f"{int(val)}"
+            else:
+                formatted_val = str(val)
+            summary_data.append({"Clinical Metric": metric, "Patient Value": formatted_val})
+        
+        summary_df = pd.DataFrame(summary_data)
+        
+        st.dataframe(
+            summary_df,
+            use_container_width=True,
+            hide_index=True
+        )
 
 
 def display_shap_explanation(model, input_df, feature_names):
@@ -429,20 +916,17 @@ def display_shap_explanation(model, input_df, feature_names):
         input_df: Preprocessed input DataFrame
         feature_names: List of feature names
     """
-    st.markdown('<div class="sub-header">SHAP Feature Importance</div>', 
+    st.markdown('<div class="sub-header">ℹ️ SHAP Feature Importance</div>', 
                 unsafe_allow_html=True)
     
-    st.markdown("""
-    <div class="info-box">
-    <p><strong>SHAP (SHapley Additive exPlanations)</strong> values show how each feature 
-    contributed to this specific prediction.</p>
-    <ul>
-        <li><strong>Positive values</strong>: Feature increases the risk prediction</li>
-        <li><strong>Negative values</strong>: Feature decreases the risk prediction</li>
-        <li><strong>Higher absolute values</strong>: Stronger impact on prediction</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("""<div class="info-box">
+<p style="margin-top: 0; font-size: 1.05rem;"><strong>🏥 SHAP (SHapley Additive exPlanations)</strong> values explain how each patient clinical feature contributed to this specific prediction.</p>
+<ul style="margin-bottom: 0; line-height: 1.8; list-style-type: disc; padding-left: 1.25rem;">
+<li><strong><span style="background-color: #f8d7da; padding: 2px 6px; border-radius: 3px; color: #721c24;">Positive values</span></strong>: Feature increases the risk prediction.</li>
+<li><strong><span style="background-color: #d4edda; padding: 2px 6px; border-radius: 3px; color: #155724;">Negative values</span></strong>: Feature decreases the risk prediction.</li>
+<li><strong><span style="background-color: #fff3cd; padding: 2px 6px; border-radius: 3px; color: #856404;">Higher absolute values</span></strong>: Stronger impact on the final prediction.</li>
+</ul>
+</div>""", unsafe_allow_html=True)
     
     try:
         # Initialize SHAP explainer
@@ -469,37 +953,135 @@ def display_shap_explanation(model, input_df, feature_names):
         # Display top 10 features
         top_features = importance_df.head(10)
         
-        # Create bar chart
+        # Render Plotly Chart inside shap-chart-container for CSS targeting
+        st.markdown('<div class="shap-chart-container">', unsafe_allow_html=True)
+        
+        # Create horizontal bar chart
         fig = go.Figure(data=[
             go.Bar(
                 x=top_features['SHAP Value'],
                 y=top_features['Feature'],
                 orientation='h',
-                marker_color=['#e74c3c' if v > 0 else '#2ecc71' for v in top_features['SHAP Value']],
-                text=[f"{v:.4f}" for v in top_features['SHAP Value']],
-                textposition='auto'
+                marker=dict(
+                    color=['#e74c3c' if v > 0 else '#2ecc71' for v in top_features['SHAP Value']],
+                    cornerradius=10,
+                    line=dict(width=1, color='rgba(0,0,0,0.1)')
+                ),
+                text=[f"<b>{v:.4f}</b>" for v in top_features['SHAP Value']],
+                textposition='outside',
+                textfont=dict(size=14, family="Arial, sans-serif")
             )
         ])
         
         fig.update_layout(
-            title="Top 10 Feature Contributions to Prediction",
-            xaxis_title="SHAP Value",
-            yaxis_title="Features",
-            height=500,
-            yaxis={'categoryorder': 'total ascending'}
+            title=dict(
+                text="<b>Top 10 Feature Contributions to Prediction</b><br><span style='font-size: 14px; color: #64748b;'>Top 10 Features Influencing the Current Prediction</span>",
+                font=dict(size=20, color='#1e293b', family="Arial, sans-serif"),
+                x=0.5,
+                xanchor='center'
+            ),
+            xaxis=dict(
+                title=dict(text="<b>SHAP Value (Impact)</b>", font=dict(size=14, color='#1e293b')),
+                tickfont=dict(size=14, color='#1e293b'),
+                showgrid=True,
+                gridcolor='#e2e8f0',
+                gridwidth=1,
+                showline=True,
+                linewidth=1,
+                linecolor='#cbd5e1'
+            ),
+            yaxis=dict(
+                title=dict(text="<b>Features</b>", font=dict(size=14, color='#1e293b')),
+                tickfont=dict(size=14, color='#1e293b', family="Arial, sans-serif"),
+                showline=True,
+                linewidth=1,
+                linecolor='#cbd5e1'
+            ),
+            yaxis_categoryorder='total ascending',
+            paper_bgcolor='#ffffff',
+            plot_bgcolor='#ffffff',
+            height=600,
+            margin=dict(l=220, r=80, t=100, b=60),
+            bargap=0.3
         )
         
         st.plotly_chart(fig, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+        # Legend below the chart
+        st.markdown("""<div style="text-align: center; margin-top: 1rem; margin-bottom: 1.5rem; font-size: 0.95rem; color: var(--text-color, #1a252f);">
+<span style="margin-right: 1.5rem;">🟢 <strong>Negative SHAP Value</strong> → Decreases Risk</span>
+<span>🔴 <strong>Positive SHAP Value</strong> → Increases Risk</span>
+</div>""", unsafe_allow_html=True)
+        
+        # Generate SHAP Summary Card automatically
+        most_important = top_features.iloc[0]['Feature']
+        
+        pos_features = top_features[top_features['SHAP Value'] > 0]
+        neg_features = top_features[top_features['SHAP Value'] < 0]
+        
+        largest_positive = pos_features.sort_values(by='SHAP Value', ascending=False).iloc[0]['Feature'] if not pos_features.empty else "None"
+        largest_negative = neg_features.sort_values(by='SHAP Value', ascending=True).iloc[0]['Feature'] if not neg_features.empty else "None"
+        
+        st.markdown(f"""<div class="shap-summary-card">
+<h4>📋 SHAP Summary</h4>
+<ul class="shap-summary-list">
+<li><span class="shap-summary-label">• Most Important Feature :</span> <span class="shap-summary-value">{most_important}</span></li>
+<li><span class="shap-summary-label">• Largest Positive Contributor :</span> <span class="shap-summary-value">{largest_positive}</span></li>
+<li><span class="shap-summary-label">• Largest Negative Contributor :</span> <span class="shap-summary-value">{largest_negative}</span></li>
+<li><span class="shap-summary-label">• Total Features Analysed :</span> <span class="shap-summary-value">10</span></li>
+</ul>
+</div>""", unsafe_allow_html=True)
+        
+        st.markdown("<div style='margin-bottom: 2rem;'></div>", unsafe_allow_html=True)
         
         # Display feature contribution table
         st.markdown('<div class="sub-header">Detailed Feature Contributions</div>', 
                     unsafe_allow_html=True)
         
-        st.dataframe(
-            top_features.style.format({'SHAP Value': '{:.4f}'}),
-            use_container_width=True,
-            hide_index=True
+        # Build HTML table for custom responsive rendering with zebra striping, row hover, rounded corners and shadow
+        table_rows = []
+        for idx, row in top_features.iterrows():
+            feature = row['Feature']
+            val = f"{row['SHAP Value']:.4f}"
+            impact = row['Impact']
+            
+            # Format impact column with colored bullet emoji
+            if impact == 'Increases Risk':
+                impact_html = '<span style="color: #e74c3c; font-weight: bold;">🔴 Increases Risk</span>'
+            else:
+                impact_html = '<span style="color: #2ecc71; font-weight: bold;">🟢 Decreases Risk</span>'
+                
+            table_rows.append(
+                f"<tr>"
+                f"<td style='font-weight: 500; color: #1e293b !important;'>{feature}</td>"
+                f"<td style='text-align: center; font-family: monospace; font-weight: bold; color: #1e293b !important;'>{val}</td>"
+                f"<td style='color: #1e293b !important;'>{impact_html}</td>"
+                f"</tr>"
+            )
+        
+        rows_html = "".join(table_rows)
+        
+        table_html = (
+            '<div class="shap-table-container">'
+            '<table class="shap-html-table">'
+            '<thead>'
+            '<tr>'
+            '<th style="font-weight: bold;">Feature</th>'
+            '<th style="text-align: center; font-weight: bold;">SHAP Value</th>'
+            '<th style="font-weight: bold;">Impact</th>'
+            '</tr>'
+            '</thead>'
+            '<tbody>'
+            f'{rows_html}'
+            '</tbody>'
+            '</table>'
+            '</div>'
         )
+        st.markdown(table_html, unsafe_allow_html=True)
+        
+        # Add table caption
+        st.markdown('<p style="font-size: 0.9rem; color: #7f8c8d; margin-top: 0.5rem; font-style: italic;">The table shows how each feature influenced the current prediction using SHAP values.</p>', unsafe_allow_html=True)
         
     except Exception as e:
         st.error(f"Error generating SHAP explanation: {e}")
@@ -514,13 +1096,12 @@ def main():
     st.markdown('<div class="main-header">🏥 Diabetic Nephropathy Prediction System</div>', 
                 unsafe_allow_html=True)
     
-    st.markdown("""
-    <div class="info-box">
-    <p>This system uses machine learning to predict the risk of diabetic nephropathy 
-    based on clinical parameters. Enter patient information below to get a prediction 
-    with explainable AI insights.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; font-size: 1.15rem; color: var(--text-color); opacity: 0.85; margin-top: -1.5rem; margin-bottom: 2rem;">Enter the patient\'s clinical information to assess the risk of diabetic nephropathy using the trained AI model.</p>', unsafe_allow_html=True)
+    
+    st.markdown("""<div class="info-box" style="padding: 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
+<span style="font-size: 1.25rem;">ℹ️</span>
+<p style="margin: 0; font-size: 1.02rem; line-height: 1.5;">This system uses machine learning to predict the risk of diabetic nephropathy based on clinical parameters. Enter patient information below to get a prediction with explainable AI insights.</p>
+</div>""", unsafe_allow_html=True)
     
     # Load model
     model = load_trained_model()
@@ -531,8 +1112,6 @@ def main():
     
     # Load feature names from model (ensures exact match)
     feature_names = load_feature_names(model)
-    
-    st.info(f"Model loaded successfully with {len(feature_names)} features")
     
     # Create input fields
     user_inputs = create_input_fields(feature_names)
@@ -553,7 +1132,7 @@ def main():
                 
                 # Display results
                 st.markdown("---")
-                display_prediction_result(prediction, probability)
+                display_prediction_result(prediction, probability, user_inputs)
                 
                 # Display SHAP explanation
                 st.markdown("---")
@@ -568,7 +1147,7 @@ def main():
     # Footer
     st.markdown("---")
     st.markdown("""
-    <div style="text-align: center; color: #7f8c8d; padding: 2rem 0;">
+    <div class="footer-container">
         <p><strong>Disclaimer:</strong> This system is for educational and research purposes only. 
         It should not be used as a substitute for professional medical advice, diagnosis, or treatment.</p>
         <p>© 2024 Diabetic Nephropathy Prediction System</p>

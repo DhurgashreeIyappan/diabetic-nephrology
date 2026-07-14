@@ -11,6 +11,20 @@ This script runs the complete machine learning pipeline for diabetic nephropathy
 
 import sys
 from pathlib import Path
+import logging
+import warnings
+
+# Reconfigure stdout/stderr to replace encoding errors on Windows console
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(errors='replace')
+
+# Configure logging to write to stdout to avoid scrambled output between print and logging statements
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(levelname)s:%(name)s:%(message)s')
+
+# Suppress warnings from matplotlib regarding unicode glyphs missing from fonts
+warnings.filterwarnings("ignore", message=".*Glyph.*missing from font.*")
 
 # Add src directory to path
 sys.path.append(str(Path(__file__).parent / 'src'))
@@ -112,6 +126,22 @@ def main():
         params=xgb_params,
         random_state=42
     )
+    from sklearn.model_selection import StratifiedKFold, cross_val_score
+
+    print("\nPerforming 5-Fold Cross Validation...")
+
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+
+    scores = cross_val_score(
+        model,
+        X_train,
+        y_train,
+        cv=cv,
+        scoring="accuracy"
+    )
+
+    print(f"Cross Validation Accuracy: {scores.mean():.2%}")
+    print(f"Fold Scores: {scores}")
     
     # Step 4: Save trained model
     print("\n[Step 4/5] Saving trained model...")

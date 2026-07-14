@@ -17,6 +17,20 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from pathlib import Path
 import sys
+import logging
+import warnings
+
+# Reconfigure stdout/stderr to replace encoding errors on Windows console
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(errors='replace')
+
+# Configure logging to write to stdout
+logging.basicConfig(level=logging.INFO, stream=sys.stdout, format='%(levelname)s:%(name)s:%(message)s')
+
+# Suppress warnings from matplotlib regarding unicode glyphs missing from fonts
+warnings.filterwarnings("ignore", message=".*Glyph.*missing from font.*")
 
 # Add src directory to path
 sys.path.append(str(Path(__file__).parent / 'src'))

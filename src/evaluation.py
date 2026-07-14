@@ -117,7 +117,7 @@ def print_metrics(metrics: Dict[str, float]) -> None:
     if value is not None:
         print(f"ROC_AUC{' '*8}: {value:.4f}")
     else:
-        print("ROC_AUC{' '*8}: N/A")
+        print(f"ROC_AUC{' '*8}: N/A")
 
 
 def plot_confusion_matrix(

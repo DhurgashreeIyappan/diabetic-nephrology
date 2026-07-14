@@ -8,7 +8,7 @@ TreeExplainer
 
 SHAP VALUES SHAPE:
 ------------------------------------------------------------
-(153, 21)
+(226, 21)
 
 GENERATED PLOTS:
 ------------------------------------------------------------
@@ -20,35 +20,35 @@ Force Plot: outputs\plots\shap_force_plot.png
 DEPENDENCE PLOTS:
 ------------------------------------------------------------
 SBP (mmHg) : outputs\plots\shap_dependence_SBP (mmHg) .png
-HbA1c (%): outputs\plots\shap_dependence_HbA1c (%).png
+FBG (mmol/L): outputs\plots\shap_dependence_FBG (mmol\L).png
 Diabetic retinopathy (DR): outputs\plots\shap_dependence_Diabetic retinopathy (DR).png
 
 ============================================================
 PATIENT EXPLANATION
 ============================================================
 
-Prediction: -2.0512
-Base Value: 0.2732
+Prediction: -4.1990
+Base Value: -0.0089
 
 TOP FEATURE CONTRIBUTIONS:
 ------------------------------------------------------------
-HbA1c (%): -0.5866 (Decreases)
-  Feature Value: 6.5000
-HDLC（mmoll）: -0.4015 (Decreases)
-  Feature Value: 1.3200
-C-peptide (ng/ml）: -0.3977 (Decreases)
-  Feature Value: 0.4900
-LDLC（mmoll）: -0.3905 (Decreases)
-  Feature Value: 2.6600
-Diabetic retinopathy (DR): 0.3387 (Increases)
+BMI (kg/m2): -0.8528 (Decreases)
+  Feature Value: 23.1405
+SBP (mmHg) : -0.8109 (Decreases)
+  Feature Value: 129.0000
+FBG (mmol/L): -0.6549 (Decreases)
+  Feature Value: 10.1800
+TC（mmoll）: -0.5333 (Decreases)
+  Feature Value: 5.5400
+HDLC（mmoll）: -0.5242 (Decreases)
+  Feature Value: 1.1400
+LDLC（mmoll）: 0.5007 (Increases)
+  Feature Value: 3.9500
+Metformin: -0.3322 (Decreases)
   Feature Value: 1.0000
-BMI (kg/m2): -0.2919 (Decreases)
-  Feature Value: 20.0288
-FBG (mmol/L): -0.2842 (Decreases)
-  Feature Value: 4.7100
-TC（mmoll）: -0.2597 (Decreases)
-  Feature Value: 4.4300
-Metformin: 0.2518 (Increases)
+Height(cm): 0.3072 (Increases)
+  Feature Value: 165.0000
+TG（mmoll）: -0.2719 (Decreases)
+  Feature Value: 1.2100
+Diabetic retinopathy (DR): -0.2635 (Decreases)
   Feature Value: 0.0000
-Height(cm): -0.1426 (Decreases)
-  Feature Value: 158.0000

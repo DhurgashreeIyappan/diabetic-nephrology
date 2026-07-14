@@ -62,7 +62,7 @@ def main():
         missing_strategy='mean',
         encode_categorical=True,
         encoding_method='label',
-        handle_imbalance=None,  # Set to 'oversample' or 'undersample' if needed
+        handle_imbalance="oversample",  # Set to 'oversample' or 'undersample' if needed
         apply_scaling=False,  # XGBoost doesn't need scaling
         scaling_method='standard',
         test_size=0.2,
@@ -91,12 +91,19 @@ def main():
     
     # Optional: Customize XGBoost parameters
     xgb_params = {
-        'n_estimators': 200,
-        'max_depth': 4,
-        'learning_rate': 0.05,
-        'subsample': 0.8,
-        'colsample_bytree': 0.8,
-        'scale_pos_weight': scale_pos_weight  # Handle class imbalance
+    'n_estimators': 500,
+    'max_depth': 6,
+    'learning_rate': 0.03,
+    'subsample': 0.9,
+    'colsample_bytree': 0.9,
+    'min_child_weight': 3,
+    'gamma': 0.1,
+    'reg_alpha': 0.1,
+    'reg_lambda': 1.0,
+    'scale_pos_weight': scale_pos_weight,
+    'objective': 'binary:logistic',
+    'eval_metric': 'logloss',
+    'random_state': 42
     }
     
     model = train_xgboost_classifier(

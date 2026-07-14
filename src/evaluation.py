@@ -238,6 +238,10 @@ def evaluate_model(
     # Make predictions
     logger.info("Making predictions on test set...")
     y_pred = model.predict(X_test)
+    from sklearn.metrics import accuracy_score
+
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"Accuracy: {accuracy:.2%}") 
     y_pred_proba = model.predict_proba(X_test)[:, 1]  # Get positive class probability only
     
     # Calculate metrics

@@ -10,6 +10,8 @@ import joblib
 from pathlib import Path
 from typing import Optional, Dict, Any
 import logging
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -128,3 +130,83 @@ def get_model_feature_importance(model: xgb.XGBClassifier, feature_names: list) 
                                   reverse=True))
     
     return importance_dict
+
+
+def train_random_forest_classifier(
+    X_train,
+    y_train,
+    params: Optional[Dict[str, Any]] = None,
+    random_state: int = 42
+) -> RandomForestClassifier:
+    """
+    Train a Random Forest Classifier.
+    
+    Args:
+        X_train: Training features
+        y_train: Training target
+        params: Random Forest hyperparameters
+        random_state: Random seed for reproducibility
+    
+    Returns:
+        Trained Random Forest Classifier model
+    """
+    logger.info("Training Random Forest Classifier...")
+    
+    # Default hyperparameters
+    default_params = {
+        'n_estimators': 100,
+        'random_state': random_state
+    }
+    
+    # Update with user-provided parameters
+    if params:
+        default_params.update(params)
+        
+    logger.info(f"Model parameters: {default_params}")
+    
+    # Initialize and train model
+    model = RandomForestClassifier(**default_params)
+    model.fit(X_train, y_train)
+    
+    logger.info("Random Forest Classifier trained successfully")
+    return model
+
+
+def train_svm_classifier(
+    X_train,
+    y_train,
+    params: Optional[Dict[str, Any]] = None,
+    random_state: int = 42
+) -> SVC:
+    """
+    Train a Support Vector Machine (SVM) Classifier.
+    
+    Args:
+        X_train: Training features
+        y_train: Training target
+        params: SVM hyperparameters
+        random_state: Random seed for reproducibility
+    
+    Returns:
+        Trained SVM Classifier model
+    """
+    logger.info("Training SVM Classifier...")
+    
+    # Default hyperparameters (probability=True is required for predict_proba / ROC-AUC)
+    default_params = {
+        'probability': True,
+        'random_state': random_state
+    }
+    
+    # Update with user-provided parameters
+    if params:
+        default_params.update(params)
+        
+    logger.info(f"Model parameters: {default_params}")
+    
+    # Initialize and train model
+    model = SVC(**default_params)
+    model.fit(X_train, y_train)
+    
+    logger.info("SVM Classifier trained successfully")
+    return model

@@ -33,6 +33,8 @@ from src import (
     load_dataset,
     preprocess_pipeline,
     train_xgboost_classifier,
+    train_random_forest_classifier,
+    train_svm_classifier,
     save_model,
     load_model,
     evaluate_model,
@@ -143,16 +145,44 @@ def main():
     print(f"Cross Validation Accuracy: {scores.mean():.2%}")
     print(f"Fold Scores: {scores}")
     
-    # Step 4: Save trained model
-    print("\n[Step 4/5] Saving trained model...")
+    # Train Random Forest
+    print("\nTraining Random Forest model...")
+    rf_model = train_random_forest_classifier(
+        X_train=X_train,
+        y_train=y_train,
+        random_state=42
+    )
+    
+    # Train SVM
+    print("\nTraining SVM model...")
+    svm_model = train_svm_classifier(
+        X_train=X_train,
+        y_train=y_train,
+        random_state=42
+    )
+
+    # Step 4: Save trained models
+    print("\n[Step 4/5] Saving trained models...")
     model_path = save_model(
         model=model,
         model_path=MODELS_DIR,
         model_name=MODEL_NAME
     )
     
-    # Step 5: Evaluate model
-    print("\n[Step 5/5] Evaluating model...")
+    rf_model_path = save_model(
+        model=rf_model,
+        model_path=MODELS_DIR,
+        model_name='random_forest_diabetic_nephropathy.joblib'
+    )
+    
+    svm_model_path = save_model(
+        model=svm_model,
+        model_path=MODELS_DIR,
+        model_name='svm_diabetic_nephropathy.joblib'
+    )
+    
+    # Step 5: Evaluate models
+    print("\n[Step 5/5] Evaluating models...")
     evaluation_results = evaluate_model(
         model=model,
         X_test=X_test,
@@ -160,6 +190,97 @@ def main():
         plots_dir=PLOTS_DIR,
         model_name="XGBoost"
     )
+    
+    rf_evaluation_results = evaluate_model(
+        model=rf_model,
+        X_test=X_test,
+        y_test=y_test,
+        plots_dir=PLOTS_DIR,
+        model_name="Random Forest"
+    )
+    
+    svm_evaluation_results = evaluate_model(
+        model=svm_model,
+        X_test=X_test,
+        y_test=y_test,
+        plots_dir=PLOTS_DIR,
+        model_name="SVM"
+    )
+    
+    # Compare all three models
+    models_metrics = {
+        'XGBoost': {
+            'accuracy': float(evaluation_results['metrics']['accuracy']),
+            'precision': float(evaluation_results['metrics']['precision']),
+            'recall': float(evaluation_results['metrics']['recall']),
+            'f1': float(evaluation_results['metrics']['f1_score']),
+            'roc_auc': float(evaluation_results['metrics']['roc_auc'] or 0.0),
+            'model_name': 'XGBoost Classifier'
+        },
+        'Random Forest': {
+            'accuracy': float(rf_evaluation_results['metrics']['accuracy']),
+            'precision': float(rf_evaluation_results['metrics']['precision']),
+            'recall': float(rf_evaluation_results['metrics']['recall']),
+            'f1': float(rf_evaluation_results['metrics']['f1_score']),
+            'roc_auc': float(rf_evaluation_results['metrics']['roc_auc'] or 0.0),
+            'model_name': 'Random Forest Classifier'
+        },
+        'Support Vector Machine': {
+            'accuracy': float(svm_evaluation_results['metrics']['accuracy']),
+            'precision': float(svm_evaluation_results['metrics']['precision']),
+            'recall': float(svm_evaluation_results['metrics']['recall']),
+            'f1': float(svm_evaluation_results['metrics']['f1_score']),
+            'roc_auc': float(svm_evaluation_results['metrics']['roc_auc'] or 0.0),
+            'model_name': 'Support Vector Machine'
+        }
+    }
+    
+    # Sort models by Accuracy (descending), ROC-AUC (descending), and F1 Score (descending)
+    sorted_models = sorted(
+        models_metrics.keys(),
+        key=lambda k: (models_metrics[k]['accuracy'], models_metrics[k]['roc_auc'], models_metrics[k]['f1']),
+        reverse=True
+    )
+    best_model_key = sorted_models[0]
+    best_model_metrics = models_metrics[best_model_key]
+    
+    # Retrieve the best model object
+    best_model_obj = None
+    if best_model_key == 'XGBoost':
+        best_model_obj = model
+    elif best_model_key == 'Random Forest':
+        best_model_obj = rf_model
+    else:
+        best_model_obj = svm_model
+        
+    # Save the selected best model as the final prediction model
+    print(f"\nStoring the selected best model ({best_model_key}) as final prediction model...")
+    final_model_path = save_model(
+        model=best_model_obj,
+        model_path=MODELS_DIR,
+        model_name='final_prediction_model.joblib'
+    )
+    
+    # Display comparison table
+    print("\n" + "-"*63)
+    print(f"{'Model':<25} {'Accuracy':<10} {'Precision':<10} {'Recall':<8} {'F1':<5} {'ROC-AUC':<8}")
+    print("-"*63)
+    for name, key in [("XGBoost", "XGBoost"), ("Random Forest", "Random Forest"), ("Support Vector Machine", "Support Vector Machine")]:
+        m = models_metrics[key]
+        print(f"{name:<25} {m['accuracy']:.2%}     {m['precision']:.2%}     {m['recall']:.2%}   {m['f1']:.2%}  {m['roc_auc']:.2%}")
+    print("-"*63)
+    
+    # Display best performing model and conclusion
+    print("\n" + "-"*55)
+    print("Best Performing Model")
+    print("-"*55)
+    print(f"Model Name: {best_model_metrics['model_name']}")
+    print(f"Accuracy: {best_model_metrics['accuracy']:.2%}")
+    print(f"ROC-AUC: {best_model_metrics['roc_auc']:.2%}")
+    print(f"F1 Score: {best_model_metrics['f1']:.2%}")
+    print("\nReason:")
+    print("This model achieved the highest overall evaluation performance and is automatically selected as the final prediction model.")
+    print("-"*55)
     
     # Save evaluation report
     report_path = Path(REPORTS_DIR) / 'evaluation_report.txt'
@@ -180,12 +301,45 @@ def main():
     shap_report_path = Path(REPORTS_DIR) / 'shap_analysis_report.txt'
     save_shap_report(shap_results, str(shap_report_path))
     
+    # Save a JSON file with all metrics and metadata for Streamlit to consume dynamically
+    metadata_path = Path(REPORTS_DIR) / 'pipeline_metadata.json'
+    print(f"\nSaving pipeline metadata and metrics to {metadata_path}...")
+    import json
+    metadata = {
+        'model_name': 'XGBoost Classifier',
+        'dataset_name': Path(DATASET_PATH).name,
+        'dataset_size': int(df.shape[0]),
+        'num_features': int(X_train.shape[1]),
+        'train_samples': int(X_train.shape[0]),
+        'test_samples': int(X_test.shape[0]),
+        'prediction_classes': int(y_train.nunique()),
+        'model_status': 'Trained Successfully',
+        'explainability': 'SHAP Enabled',
+        'accuracy': float(evaluation_results['metrics']['accuracy']),
+        'cv_accuracy': float(scores.mean()),
+        'precision': float(evaluation_results['metrics']['precision']),
+        'recall': float(evaluation_results['metrics']['recall']),
+        'f1_score': float(evaluation_results['metrics']['f1_score']),
+        'roc_auc': float(evaluation_results['metrics']['roc_auc']),
+        'comparison': models_metrics,
+        'best_model': {
+            'name': best_model_metrics['model_name'],
+            'key': best_model_key,
+            'accuracy': float(best_model_metrics['accuracy']),
+            'roc_auc': float(best_model_metrics['roc_auc']),
+            'f1_score': float(best_model_metrics['f1'])
+        }
+    }
+    with open(metadata_path, 'w', encoding='utf-8') as f:
+        json.dump(metadata, f, indent=4)
+    
     print("\n" + "="*60)
     print("PIPELINE COMPLETED SUCCESSFULLY")
     print("="*60)
     print(f"\nModel saved to: {model_path}")
     print(f"Evaluation report saved to: {report_path}")
     print(f"SHAP analysis report saved to: {shap_report_path}")
+    print(f"Pipeline metadata saved to: {metadata_path}")
     print(f"Plots saved to: {PLOTS_DIR}")
 
 

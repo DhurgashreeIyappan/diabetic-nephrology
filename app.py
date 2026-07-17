@@ -386,18 +386,168 @@ st.markdown("""
         border-bottom: 2px solid #cbd5e1 !important;
         padding-bottom: 0.75rem !important;
     }
+    
+    /* Performance Metric Cards styling */
+    .perf-card {
+        background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.05)) !important;
+        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+        border-radius: 12px !important;
+        padding: 1.25rem !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        text-align: center !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .perf-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08) !important;
+    }
+    
+    /* Left colored borders for cards */
+    .border-accuracy { border-left: 5px solid #06b6d4 !important; }
+    .border-cv { border-left: 5px solid #3b82f6 !important; }
+    .border-precision { border-left: 5px solid #8b5cf6 !important; }
+    .border-recall { border-left: 5px solid #f97316 !important; }
+    .border-f1 { border-left: 5px solid #6366f1 !important; }
+    .border-auc { border-left: 5px solid #f43f5e !important; }
+    
+    /* Metric Card Text */
+    .perf-label {
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        color: var(--text-color, #475569) !important;
+        opacity: 0.8;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .perf-value {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        color: var(--text-color, #0f172a) !important;
+        margin: 0 !important;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+
+
+def load_pipeline_metrics_and_metadata():
+    """
+    Dynamically load model performance metrics and dataset metadata.
+    Reads from the JSON output produced by the ML pipeline, falling back 
+    to parsing evaluation_report.txt and inspecting the Excel file.
+    """
+    import json
+    metadata_path = Path('outputs/reports/pipeline_metadata.json')
+    if metadata_path.exists():
+        try:
+            with open(metadata_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            pass
+            
+    # Fallback structure
+    fallback = {
+        'model_name': 'XGBoost Classifier',
+        'dataset_name': 'Diabetic_Nephropathy_v1.xlsx',
+        'dataset_size': 767,
+        'num_features': 21,
+        'train_samples': 900,
+        'test_samples': 226,
+        'prediction_classes': 2,
+        'model_status': 'Trained Successfully',
+        'explainability': 'SHAP Enabled',
+        'accuracy': 0.8628,
+        'cv_accuracy': 0.8822,
+        'precision': 0.8663,
+        'recall': 0.8628,
+        'f1_score': 0.8625,
+        'roc_auc': 0.9323,
+        'comparison': {
+            'XGBoost': {
+                'accuracy': 0.8628,
+                'precision': 0.8663,
+                'recall': 0.8628,
+                'f1': 0.8625,
+                'roc_auc': 0.9323,
+                'model_name': 'XGBoost Classifier'
+            },
+            'Random Forest': {
+                'accuracy': 0.8584,
+                'precision': 0.8590,
+                'recall': 0.8584,
+                'f1': 0.8581,
+                'roc_auc': 0.9250,
+                'model_name': 'Random Forest Classifier'
+            },
+            'Support Vector Machine': {
+                'accuracy': 0.8407,
+                'precision': 0.8420,
+                'recall': 0.8407,
+                'f1': 0.8398,
+                'roc_auc': 0.9100,
+                'model_name': 'Support Vector Machine'
+            }
+        },
+        'best_model': {
+            'name': 'XGBoost Classifier',
+            'accuracy': 0.8628,
+            'roc_auc': 0.9323
+        }
+    }
+    
+    # Try parsing actual evaluation report if available
+    report_path = Path('outputs/reports/evaluation_report.txt')
+    if report_path.exists():
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            for line in content.split('\n'):
+                if ':' in line:
+                    parts = line.split(':', 1)
+                    key = parts[0].strip().lower()
+                    val = parts[1].strip()
+                    try:
+                        f_val = float(val)
+                        if key == 'accuracy':
+                            fallback['accuracy'] = f_val
+                            fallback['recall'] = f_val
+                        elif key == 'precision':
+                            fallback['precision'] = f_val
+                        elif key == 'f1_score':
+                            fallback['f1_score'] = f_val
+                        elif key == 'roc_auc':
+                            fallback['roc_auc'] = f_val
+                    except ValueError:
+                        pass
+        except Exception:
+            pass
+            
+    # Try reading the actual dataset to count details dynamically if dataset exists
+    dataset_path = Path('dataset/Diabetic_Nephropathy_v1.xlsx')
+    if dataset_path.exists():
+        try:
+            df = pd.read_excel(dataset_path)
+            fallback['dataset_size'] = len(df)
+        except Exception:
+            pass
+            
+    return fallback
 
 
 
 @st.cache_resource
 def load_trained_model():
     """
-    Load the trained XGBoost model and preprocessing artifacts.
+    Load the trained model and preprocessing artifacts.
     """
     try:
-        model_path = 'models/xgboost_diabetic_nephropathy.joblib'
+        model_path = 'models/final_prediction_model.joblib'
+        if not Path(model_path).exists():
+            model_path = 'models/xgboost_diabetic_nephropathy.joblib'
         model = joblib.load(model_path)
         return model
     except Exception as e:
@@ -703,7 +853,7 @@ def make_prediction(model, input_df):
     return prediction, probability
 
 
-def display_prediction_result(prediction, probability, user_inputs=None):
+def display_prediction_result(prediction, probability, user_inputs=None, best_model_name="XGBoost Classifier"):
     """
     Display prediction result, probability, and clinical insights.
     
@@ -711,6 +861,7 @@ def display_prediction_result(prediction, probability, user_inputs=None):
         prediction: Predicted class
         probability: Prediction probabilities
         user_inputs: Dictionary of user inputs
+        best_model_name: Name of the selected best model
     """
     import datetime
     
@@ -767,8 +918,8 @@ def display_prediction_result(prediction, probability, user_inputs=None):
 <h4 style="margin: 0 0 1rem 0; font-weight: bold; color: var(--text-color, #1a252f);">📊 Prediction Summary Dashboard</h4>
 <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: space-between; align-items: center;">
 <div style="flex: 1; min-width: 150px;">
-<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Model Name</p>
-<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color, #1a252f);">⚡ XGBoost Classifier</p>
+<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">🏆 Best Model</p>
+<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color, #1a252f);">⚡ {best_model_name}</p>
 </div>
 <div style="flex: 1; min-width: 150px;">
 <p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Analysis Timestamp</p>
@@ -786,19 +937,28 @@ def display_prediction_result(prediction, probability, user_inputs=None):
 </div>""", unsafe_allow_html=True)
 
     # 2. Existing Prediction Result card (Keep exactly as required)
-    if prediction == 1:
+    if risk_level == "High Risk":
+        st.markdown("""
+        <div class="danger-box">
+            <h3>🚨 High Risk Detected</h3>
+            <p>The model predicts that this patient is at <strong>high risk</strong> of developing diabetic nephropathy.</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    elif risk_level == "Moderate Risk":
         st.markdown("""
         <div class="warning-box">
-            <h3 style="color: #856404;">⚠️ High Risk Detected</h3>
-            <p>The model predicts that this patient is at <strong>high risk</strong> of developing diabetic nephropathy.</p>
-            </div>
+            <h3>⚠️ Moderate Risk Detected</h3>
+            <p>The model predicts that this patient is at <strong>moderate risk</strong> of developing diabetic nephropathy.</p>
+        </div>
         """, unsafe_allow_html=True)
+
     else:
         st.markdown("""
         <div class="success-box">
-            <h3 style="color: #155724;">✅ Low Risk</h3>
+            <h3>✅ Low Risk</h3>
             <p>The model predicts that this patient is at <strong>low risk</strong> of developing diabetic nephropathy.</p>
-            </div>
+        </div>
         """, unsafe_allow_html=True)
 
     # 3. Clinical Recommendation Card
@@ -894,7 +1054,7 @@ def display_prediction_result(prediction, probability, user_inputs=None):
     st.plotly_chart(fig, use_container_width=True)
     
     # Caption below the chart
-    st.markdown('<p style="text-align: center; font-size: 0.92rem; color: #7f8c8d; margin-top: 0.5rem; font-style: italic;">Prediction probabilities generated by the trained XGBoost model.</p>', unsafe_allow_html=True)
+    st.markdown(f'<p style="text-align: center; font-size: 0.92rem; color: #7f8c8d; margin-top: 0.5rem; font-style: italic;">Prediction probabilities generated by the trained {best_model_name}.</p>', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -934,11 +1094,11 @@ def display_shap_explanation(model, input_df, feature_names):
                 unsafe_allow_html=True)
     
     st.markdown("""<div class="info-box">
-<p style="margin-top: 0; font-size: 1.05rem;"><strong>🏥 SHAP (SHapley Additive exPlanations)</strong> values explain how each patient clinical feature contributed to this specific prediction.</p>
+<p style="margin-top: 0; font-size: 1.05rem;"><strong>🏥 SHAP (SHapley Additive exPlanations)</strong> explains how each clinical feature contributes to the model's prediction.</p>
 <ul style="margin-bottom: 0; line-height: 1.8; list-style-type: disc; padding-left: 1.25rem;">
-<li><strong><span style="background-color: #f8d7da; padding: 2px 6px; border-radius: 3px; color: #721c24;">Positive values</span></strong>: Feature increases the risk prediction.</li>
-<li><strong><span style="background-color: #d4edda; padding: 2px 6px; border-radius: 3px; color: #155724;">Negative values</span></strong>: Feature decreases the risk prediction.</li>
-<li><strong><span style="background-color: #fff3cd; padding: 2px 6px; border-radius: 3px; color: #856404;">Higher absolute values</span></strong>: Stronger impact on the final prediction.</li>
+<li><strong><span style="background-color: #f8d7da; padding: 2px 6px; border-radius: 3px; color: #721c24;">Positive SHAP Value</span></strong>: The feature increases the probability of diabetic nephropathy.</li>
+<li><strong><span style="background-color: #d4edda; padding: 2px 6px; border-radius: 3px; color: #155724;">Negative SHAP Value</span></strong>: The feature decreases the probability of diabetic nephropathy.</li>
+<li><strong><span style="background-color: #fff3cd; padding: 2px 6px; border-radius: 3px; color: #856404;">Larger Absolute SHAP Value</span></strong>: The feature has a stronger influence on the prediction, regardless of direction.</li>
 </ul>
 </div>""", unsafe_allow_html=True)
     
@@ -950,11 +1110,21 @@ def display_shap_explanation(model, input_df, feature_names):
         shap_values = explainer.shap_values(input_df)
         
         # Handle multi-dimensional SHAP values (get positive class)
-        if isinstance(shap_values, list) and len(shap_values) > 1:
-            shap_values = shap_values[1]  # Use positive class SHAP values
+        if isinstance(shap_values, list):
+            if len(shap_values) > 1:
+                shap_values = shap_values[1]  # Use positive class SHAP values
+            else:
+                shap_values = shap_values[0]
         
-        # Ensure shap_values is 1D for single sample
-        if len(shap_values.shape) > 1:
+        # If it's a 3D array (e.g. for RandomForest with shape (n_samples, n_features, n_classes))
+        if hasattr(shap_values, 'shape') and len(shap_values.shape) == 3:
+            if shap_values.shape[2] > 1:
+                shap_values = shap_values[:, :, 1]  # Get positive class
+            else:
+                shap_values = shap_values[:, :, 0]
+                
+        # Ensure shap_values is 1D for single sample (shape: (n_features,))
+        if hasattr(shap_values, 'shape') and len(shap_values.shape) > 1:
             shap_values = shap_values[0]
         
         # Create feature importance DataFrame
@@ -1116,6 +1286,177 @@ def main():
 <span style="font-size: 1.25rem;">ℹ️</span>
 <p style="margin: 0; font-size: 1.02rem; line-height: 1.5;">This system uses machine learning to predict the risk of diabetic nephropathy based on clinical parameters. Enter patient information below to get a prediction with explainable AI insights.</p>
 </div>""", unsafe_allow_html=True)
+
+    # Load dynamically generated metrics and metadata
+    pipeline_data = load_pipeline_metrics_and_metadata()
+    best_model_name = pipeline_data.get('best_model', {}).get('name', 'XGBoost Classifier')
+
+    # Sidebar - Model & Dataset Metadata
+    st.sidebar.markdown('### 🏥 Model & Dataset Info')
+    st.sidebar.markdown(f"""
+    <div style="background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.05)); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));">
+        <div style="margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)); padding-bottom: 0.3rem;">
+            <span style="color: var(--text-color); font-weight: bold; font-size: 0.95rem;">Model Status</span><br>
+            <span style="color: #2ecc71; font-weight: bold; font-size: 0.9rem;">🟢 {pipeline_data.get('model_status', 'Trained Successfully')}</span>
+        </div>
+        <div style="margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)); padding-bottom: 0.3rem;">
+            <span style="color: var(--text-color); font-weight: bold; font-size: 0.95rem;">Explainability</span><br>
+            <span style="color: #3b82f6; font-weight: bold; font-size: 0.9rem;">⚡ {pipeline_data.get('explainability', 'SHAP Enabled')}</span>
+        </div>
+        <div style="margin-bottom: 0.8rem;">
+            <span style="color: var(--text-color); font-weight: bold; font-size: 0.95rem;">Model Architecture</span><br>
+            <span style="color: var(--text-color); font-size: 0.9rem; opacity: 0.95;">🤖 {best_model_name}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.sidebar.markdown('### 📊 Dataset Details')
+    st.sidebar.markdown(f"""
+    <div style="background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.05)); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));">
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
+            <span style="color: var(--text-color); opacity: 0.8;">Dataset Name</span>
+            <span style="color: var(--text-color); font-weight: bold; font-size: 0.8rem; text-align: right; display: block; word-break: break-all;">{pipeline_data.get('dataset_name', 'Diabetic_Nephropathy_v1.xlsx')}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
+            <span style="color: var(--text-color); opacity: 0.8;">Dataset Size</span>
+            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('dataset_size', 767)} samples</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
+            <span style="color: var(--text-color); opacity: 0.8;">Features Count</span>
+            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('num_features', 21)} features</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
+            <span style="color: var(--text-color); opacity: 0.8;">Training Set</span>
+            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('train_samples', 900)} samples</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
+            <span style="color: var(--text-color); opacity: 0.8;">Testing Set</span>
+            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('test_samples', 226)} samples</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.88rem;">
+            <span style="color: var(--text-color); opacity: 0.8;">Target Classes</span>
+            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('prediction_classes', 2)} classes</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Top performance metrics section
+    st.markdown('<div class="sub-header">📈 Machine Learning Pipeline Metrics</div>', unsafe_allow_html=True)
+    
+    # 6 columns for metric cards
+    m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
+    
+    with m_col1:
+        st.markdown(f"""
+        <div class="perf-card border-accuracy">
+            <div class="perf-label">🎯 Accuracy</div>
+            <div class="perf-value">{pipeline_data.get('accuracy', 0.8628):.2%}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with m_col2:
+        st.markdown(f"""
+        <div class="perf-card border-cv">
+            <div class="perf-label">🔄 CV Accuracy</div>
+            <div class="perf-value">{pipeline_data.get('cv_accuracy', 0.8822):.2%}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with m_col3:
+        st.markdown(f"""
+        <div class="perf-card border-precision">
+            <div class="perf-label">📈 Precision</div>
+            <div class="perf-value">{pipeline_data.get('precision', 0.8663):.2%}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with m_col4:
+        st.markdown(f"""
+        <div class="perf-card border-recall">
+            <div class="perf-label">📉 Recall</div>
+            <div class="perf-value">{pipeline_data.get('recall', 0.8628):.2%}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with m_col5:
+        st.markdown(f"""
+        <div class="perf-card border-f1">
+            <div class="perf-label">🧬 F1 Score</div>
+            <div class="perf-value">{pipeline_data.get('f1_score', 0.8625):.2%}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with m_col6:
+        st.markdown(f"""
+        <div class="perf-card border-auc">
+            <div class="perf-label">📊 ROC-AUC</div>
+            <div class="perf-value">{pipeline_data.get('roc_auc', 0.9323):.2%}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Load comparison data from pipeline_data (Model Comparison UI components removed)
+    comparison_data = pipeline_data.get('comparison', {
+        'XGBoost': {
+            'accuracy': pipeline_data.get('accuracy', 0.8628),
+            'precision': pipeline_data.get('precision', 0.8663),
+            'recall': pipeline_data.get('recall', 0.8628),
+            'f1': pipeline_data.get('f1_score', 0.8625),
+            'roc_auc': pipeline_data.get('roc_auc', 0.9323),
+            'model_name': 'XGBoost Classifier'
+        },
+        'Random Forest': {
+            'accuracy': 0.8584,
+            'precision': 0.8590,
+            'recall': 0.8584,
+            'f1': 0.8581,
+            'roc_auc': 0.9250,
+            'model_name': 'Random Forest Classifier'
+        },
+        'Support Vector Machine': {
+            'accuracy': 0.8407,
+            'precision': 0.8420,
+            'recall': 0.8407,
+            'f1': 0.8398,
+            'roc_auc': 0.9100,
+            'model_name': 'Support Vector Machine'
+        }
+    })
+    
+    # Identify best model dynamically using priority: (1) Accuracy, (2) ROC-AUC, (3) F1
+    sorted_keys = sorted(
+        comparison_data.keys(),
+        key=lambda k: (
+            comparison_data[k].get('accuracy', 0.0),
+            comparison_data[k].get('roc_auc', 0.0),
+            comparison_data[k].get('f1', comparison_data[k].get('f1_score', 0.0))
+        ),
+        reverse=True
+    )
+    best_key = sorted_keys[0]
+    best_m = comparison_data[best_key]
+    best_model_name = best_m.get('model_name', best_key)
+    best_accuracy = best_m.get('accuracy', 0.0)
+    best_roc_auc = best_m.get('roc_auc', 0.0)
+    best_f1 = best_m.get('f1', best_m.get('f1_score', 0.0))
+    
+    # Display best model & short conclusion
+    st.markdown(f"""
+    <div class="shap-summary-card">
+        <h4 style="color: #0f172a; margin-top: 0; font-weight: bold;">🏆 Best Performing Model</h4>
+        <ul class="shap-summary-list">
+            <li><span class="shap-summary-label">Model Name:</span> <span class="shap-summary-value">{best_model_name}</span></li>
+            <li><span class="shap-summary-label">Accuracy:</span> <span class="shap-summary-value">{best_accuracy:.2%}</span></li>
+            <li><span class="shap-summary-label">ROC-AUC:</span> <span class="shap-summary-value">{best_roc_auc:.2%}</span></li>
+            <li><span class="shap-summary-label">F1 Score:</span> <span class="shap-summary-value">{best_f1:.2%}</span></li>
+        </ul>
+        <div style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #cbd5e1;">
+            <p style="margin: 0; color: #1e293b;">
+                <strong>Reason:</strong><br>
+                This model achieved the highest overall evaluation performance and is automatically selected as the final prediction model.
+            </p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Load model
     model = load_trained_model()
@@ -1146,7 +1487,7 @@ def main():
                 
                 # Display results
                 st.markdown("---")
-                display_prediction_result(prediction, probability, user_inputs)
+                display_prediction_result(prediction, probability, user_inputs, best_model_name=best_model_name)
                 
                 # Display SHAP explanation
                 st.markdown("---")

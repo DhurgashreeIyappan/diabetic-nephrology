@@ -16,6 +16,8 @@ from .preprocessing import (
 )
 from .model import (
     train_xgboost_classifier,
+    train_random_forest_classifier,
+    train_svm_classifier,
     save_model,
     load_model,
     get_model_feature_importance
@@ -55,6 +57,8 @@ __all__ = [
     'train_test_split_data',
     'apply_feature_scaling',
     'train_xgboost_classifier',
+    'train_random_forest_classifier',
+    'train_svm_classifier',
     'save_model',
     'load_model',
     'get_model_feature_importance',

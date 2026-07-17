@@ -1,0 +1,50 @@
+{
+    "model_name": "XGBoost Classifier",
+    "dataset_name": "Diabetic_Nephropathy_v1.xlsx",
+    "dataset_size": 767,
+    "num_features": 21,
+    "train_samples": 900,
+    "test_samples": 226,
+    "prediction_classes": 2,
+    "model_status": "Trained Successfully",
+    "explainability": "SHAP Enabled",
+    "accuracy": 0.8628318584070797,
+    "cv_accuracy": 0.8822222222222222,
+    "precision": 0.8663029728020242,
+    "recall": 0.8628318584070797,
+    "f1_score": 0.8625061328623295,
+    "roc_auc": 0.9322578118881666,
+    "comparison": {
+        "XGBoost": {
+            "accuracy": 0.8628318584070797,
+            "precision": 0.8663029728020242,
+            "recall": 0.8628318584070797,
+            "f1": 0.8625061328623295,
+            "roc_auc": 0.9322578118881666,
+            "model_name": "XGBoost Classifier"
+        },
+        "Random Forest": {
+            "accuracy": 0.8938053097345132,
+            "precision": 0.8939287113200157,
+            "recall": 0.8938053097345132,
+            "f1": 0.8937969924812031,
+            "roc_auc": 0.942556190774532,
+            "model_name": "Random Forest Classifier"
+        },
+        "Support Vector Machine": {
+            "accuracy": 0.6194690265486725,
+            "precision": 0.6233325248605385,
+            "recall": 0.6194690265486725,
+            "f1": 0.6164653879548504,
+            "roc_auc": 0.6510298378886364,
+            "model_name": "Support Vector Machine"
+        }
+    },
+    "best_model": {
+        "name": "Random Forest Classifier",
+        "key": "Random Forest",
+        "accuracy": 0.8938053097345132,
+        "roc_auc": 0.942556190774532,
+        "f1_score": 0.8937969924812031
+    }
+}

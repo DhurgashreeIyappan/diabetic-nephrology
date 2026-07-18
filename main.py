@@ -10,6 +10,7 @@ This script runs the complete machine learning pipeline for diabetic nephropathy
 """
 
 import sys
+import csv
 from pathlib import Path
 import logging
 import warnings
@@ -253,34 +254,68 @@ def main():
     else:
         best_model_obj = svm_model
         
-    # Save the selected best model as the final prediction model
-    print(f"\nStoring the selected best model ({best_model_key}) as final prediction model...")
+    # Save the selected best model as the final prediction model.
     final_model_path = save_model(
         model=best_model_obj,
         model_path=MODELS_DIR,
         model_name='final_prediction_model.joblib'
     )
-    
-    # Display comparison table
-    print("\n" + "-"*63)
-    print(f"{'Model':<25} {'Accuracy':<10} {'Precision':<10} {'Recall':<8} {'F1':<5} {'ROC-AUC':<8}")
-    print("-"*63)
-    for name, key in [("XGBoost", "XGBoost"), ("Random Forest", "Random Forest"), ("Support Vector Machine", "Support Vector Machine")]:
-        m = models_metrics[key]
-        print(f"{name:<25} {m['accuracy']:.2%}     {m['precision']:.2%}     {m['recall']:.2%}   {m['f1']:.2%}  {m['roc_auc']:.2%}")
-    print("-"*63)
-    
-    # Display best performing model and conclusion
-    print("\n" + "-"*55)
-    print("Best Performing Model")
-    print("-"*55)
-    print(f"Model Name: {best_model_metrics['model_name']}")
-    print(f"Accuracy: {best_model_metrics['accuracy']:.2%}")
-    print(f"ROC-AUC: {best_model_metrics['roc_auc']:.2%}")
-    print(f"F1 Score: {best_model_metrics['f1']:.2%}")
-    print("\nReason:")
-    print("This model achieved the highest overall evaluation performance and is automatically selected as the final prediction model.")
-    print("-"*55)
+
+    # Create one professional comparison table for the console and report.
+    model_order = ['XGBoost', 'Random Forest', 'Support Vector Machine']
+    table_border = '+' + '-' * 26 + '+' + '-' * 10 + '+' + '-' * 11 + '+' + '-' * 8 + '+' + '-' * 10 + '+' + '-' * 10 + '+'
+    table_lines = [
+        '=' * 62,
+        '      MODEL COMPARISON AFTER FEATURE SELECTION',
+        '=' * 62,
+        '',
+        table_border,
+        '| Model                    | Accuracy | Precision | Recall | F1 Score | ROC-AUC  |',
+        table_border
+    ]
+    for name in model_order:
+        metrics = models_metrics[name]
+        table_lines.append(
+            f"| {name:<24} | {metrics['accuracy']:<8.4f} | "
+            f"{metrics['precision']:<9.4f} | {metrics['recall']:<6.4f} | "
+            f"{metrics['f1']:<8.4f} | {metrics['roc_auc']:<8.4f} |"
+        )
+    table_lines.extend([
+        table_border,
+        '',
+        '=' * 62,
+        'BEST MODEL',
+        '=' * 62,
+        '',
+        best_model_key
+    ])
+    comparison_output = '\n'.join(table_lines)
+
+    # Save the comparison CSV with its established column format.
+    comparison_path = Path(REPORTS_DIR) / 'model_comparison_feature_selection.csv'
+    comparison_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(comparison_path, 'w', newline='', encoding='utf-8') as csv_file:
+        writer = csv.DictWriter(
+            csv_file,
+            fieldnames=['Model', 'Accuracy', 'Precision', 'Recall', 'F1_score', 'Roc_auc']
+        )
+        writer.writeheader()
+        for name in model_order:
+            metrics = models_metrics[name]
+            writer.writerow({
+                'Model': name,
+                'Accuracy': f"{metrics['accuracy']:.4f}",
+                'Precision': f"{metrics['precision']:.4f}",
+                'Recall': f"{metrics['recall']:.4f}",
+                'F1_score': f"{metrics['f1']:.4f}",
+                'Roc_auc': f"{metrics['roc_auc']:.4f}"
+            })
+
+    comparison_report_path = Path(REPORTS_DIR) / 'model_comparison_feature_selection_report.txt'
+    with open(comparison_report_path, 'w', encoding='utf-8') as report_file:
+        report_file.write(comparison_output + '\n')
+
+    print('\n' + comparison_output)
     
     # Save evaluation report
     report_path = Path(REPORTS_DIR) / 'evaluation_report.txt'

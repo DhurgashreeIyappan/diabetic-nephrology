@@ -1,0 +1,4 @@
+Model,Accuracy,Precision,Recall,F1_score,Roc_auc
+XGBoost,0.8628,0.8663,0.8628,0.8625,0.9323
+Random Forest,0.8938,0.8939,0.8938,0.8938,0.9426
+Support Vector Machine,0.6195,0.6233,0.6195,0.6165,0.6510

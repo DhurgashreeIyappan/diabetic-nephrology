@@ -1,0 +1,16 @@
+SELECTED FEATURES
+==============================================================
+
+Diabetic retinopathy (DR)
+SBP (mmHg) 
+HbA1c (%)
+Diabetes duration (y)
+HDLC（mmoll）
+TG（mmoll）
+DBP (mmHg)
+LDLC（mmoll）
+Metformin
+C-peptide (ng/ml）
+TC（mmoll）
+Weight(kg)
+FBG (mmol/L)

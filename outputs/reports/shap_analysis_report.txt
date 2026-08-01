@@ -4,7 +4,7 @@ SHAP ANALYSIS REPORT
 
 EXPLAINER TYPE:
 ------------------------------------------------------------
-TreeExplainer
+PermutationExplainer
 
 SHAP VALUES SHAPE:
 ------------------------------------------------------------
@@ -20,35 +20,35 @@ Force Plot: outputs\plots\shap_force_plot.png
 DEPENDENCE PLOTS:
 ------------------------------------------------------------
 SBP (mmHg) : outputs\plots\shap_dependence_SBP (mmHg) .png
-FBG (mmol/L): outputs\plots\shap_dependence_FBG (mmol\L).png
-Diabetic retinopathy (DR): outputs\plots\shap_dependence_Diabetic retinopathy (DR).png
+Weight(kg): outputs\plots\shap_dependence_Weight(kg).png
+Age: outputs\plots\shap_dependence_Age.png
 
 ============================================================
 PATIENT EXPLANATION
 ============================================================
 
-Prediction: -4.1990
-Base Value: -0.0089
+Prediction: 0.1012
+Base Value: 0.5000
 
 TOP FEATURE CONTRIBUTIONS:
 ------------------------------------------------------------
-BMI (kg/m2): -0.8528 (Decreases)
-  Feature Value: 23.1405
-SBP (mmHg) : -0.8109 (Decreases)
+SBP (mmHg) : -0.0760 (Decreases)
   Feature Value: 129.0000
-FBG (mmol/L): -0.6549 (Decreases)
-  Feature Value: 10.1800
-TC（mmoll）: -0.5333 (Decreases)
-  Feature Value: 5.5400
-HDLC（mmoll）: -0.5242 (Decreases)
-  Feature Value: 1.1400
-LDLC（mmoll）: 0.5007 (Increases)
-  Feature Value: 3.9500
-Metformin: -0.3322 (Decreases)
-  Feature Value: 1.0000
-Height(cm): 0.3072 (Increases)
+DBP (mmHg): -0.0759 (Decreases)
+  Feature Value: 94.0000
+Diabetes duration (y): -0.0508 (Decreases)
+  Feature Value: 4.0000
+Height(cm): -0.0375 (Decreases)
   Feature Value: 165.0000
-TG（mmoll）: -0.2719 (Decreases)
+Age: -0.0358 (Decreases)
+  Feature Value: 43.0000
+FBG (mmol/L): -0.0328 (Decreases)
+  Feature Value: 10.1800
+Weight(kg): -0.0289 (Decreases)
+  Feature Value: 63.0000
+BMI (kg/m2): -0.0277 (Decreases)
+  Feature Value: 23.1405
+HbA1c (%): -0.0146 (Decreases)
+  Feature Value: 8.4000
+TG（mmoll）: -0.0059 (Decreases)
   Feature Value: 1.2100
-Diabetic retinopathy (DR): -0.2635 (Decreases)
-  Feature Value: 0.0000

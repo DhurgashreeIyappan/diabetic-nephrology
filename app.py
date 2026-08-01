@@ -547,7 +547,8 @@ def load_trained_model():
     try:
         model_path = 'models/final_prediction_model.joblib'
         if not Path(model_path).exists():
-            model_path = 'models/xgboost_diabetic_nephropathy.joblib'
+            st.error("Final prediction model not found. Run main.py to train the pipeline.")
+            return None
         model = joblib.load(model_path)
         return model
     except Exception as e:
@@ -1103,11 +1104,19 @@ def display_shap_explanation(model, input_df, feature_names):
 </div>""", unsafe_allow_html=True)
     
     try:
-        # Initialize SHAP explainer
-        explainer = shap.TreeExplainer(model)
-        
-        # Calculate SHAP values
-        shap_values = explainer.shap_values(input_df)
+        # Initialize SHAP explainer (tree-based or model-agnostic for ensemble models)
+        tree_model_names = {'XGBClassifier', 'RandomForestClassifier', 'ExtraTreesClassifier', 'LGBMClassifier'}
+        if model.__class__.__name__ in tree_model_names:
+            explainer = shap.TreeExplainer(model)
+            shap_values = explainer.shap_values(input_df)
+        else:
+            def positive_probability(values):
+                frame = pd.DataFrame(values, columns=input_df.columns)
+                return model.predict_proba(frame)[:, 1]
+            background = input_df
+            explainer = shap.Explainer(positive_probability, background)
+            explanation = explainer(input_df)
+            shap_values = explanation.values
         
         # Handle multi-dimensional SHAP values (get positive class)
         if isinstance(shap_values, list):

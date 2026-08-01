@@ -10,8 +10,11 @@ import joblib
 from pathlib import Path
 from typing import Optional, Dict, Any
 import logging
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import ExtraTreesClassifier, RandomForestClassifier, StackingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
 from sklearn.svm import SVC
+from lightgbm import LGBMClassifier
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -210,3 +213,68 @@ def train_svm_classifier(
     
     logger.info("SVM Classifier trained successfully")
     return model
+
+
+def train_lightgbm_classifier(X_train, y_train, params: Optional[Dict[str, Any]] = None,
+                              random_state: int = 42) -> LGBMClassifier:
+    """Train a LightGBM classifier using the already prepared feature data."""
+    default_params = {'objective': 'binary', 'random_state': random_state,
+                      'verbosity': -1, 'n_jobs': -1}
+    if params:
+        default_params.update(params)
+    model = LGBMClassifier(**default_params)
+    model.fit(X_train, y_train)
+    return model
+
+
+def train_extra_trees_classifier(X_train, y_train, params: Optional[Dict[str, Any]] = None,
+                                 random_state: int = 42) -> ExtraTreesClassifier:
+    """Train an Extra Trees classifier using the already prepared feature data."""
+    default_params = {'n_estimators': 300, 'random_state': random_state, 'n_jobs': -1}
+    if params:
+        default_params.update(params)
+    model = ExtraTreesClassifier(**default_params)
+    model.fit(X_train, y_train)
+    return model
+
+
+def tune_classifier(estimator, param_distributions: Dict[str, Any], X_train, y_train,
+                    random_state: int = 42, n_iter: int = 10):
+    """Tune a classifier with stratified five-fold ROC-AUC optimisation.
+
+    This helper deliberately accepts the preprocessed training data; preprocessing
+    and feature selection remain solely owned by the existing pipeline.
+    """
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state)
+    search = RandomizedSearchCV(
+        estimator=estimator,
+        param_distributions=param_distributions,
+        n_iter=n_iter,
+        scoring='roc_auc',
+        cv=cv,
+        random_state=random_state,
+        n_jobs=-1,
+        refit=True,
+        verbose=0,
+    )
+    search.fit(X_train, y_train)
+    logger.info("Best ROC-AUC for %s: %.4f", estimator.__class__.__name__, search.best_score_)
+    return search.best_estimator_, search
+
+
+def build_stacking_classifier(xgb_model, rf_model, svm_model, lightgbm_model, extra_trees_model,
+                              random_state: int = 42) -> StackingClassifier:
+    """Fit the proposed ensemble with Logistic Regression as its meta-learner."""
+    return StackingClassifier(
+        estimators=[
+            ('xgboost', xgb_model),
+            ('random_forest', rf_model),
+            ('svm', svm_model),
+            ('lightgbm', lightgbm_model),
+            ('extra_trees', extra_trees_model),
+        ],
+        final_estimator=LogisticRegression(max_iter=2000, random_state=random_state),
+        stack_method='predict_proba',
+        cv=StratifiedKFold(n_splits=5, shuffle=True, random_state=random_state),
+        n_jobs=-1,
+    )

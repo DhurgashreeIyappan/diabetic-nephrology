@@ -4,23 +4,23 @@ MODEL EVALUATION REPORT
 
 WEIGHTED METRICS:
 ------------------------------------------------------------
-ACCURACY: 0.8628
-PRECISION: 0.8663
-RECALL: 0.8628
-F1_SCORE: 0.8625
+ACCURACY: 0.9336
+PRECISION: 0.9414
+RECALL: 0.9336
+F1_SCORE: 0.9333
 
 POSITIVE CLASS METRICS:
 ------------------------------------------------------------
-PRECISION_POSITIVE: 0.8306
-RECALL_POSITIVE: 0.9115
-F1_POSITIVE: 0.8692
+PRECISION_POSITIVE: 1.0000
+RECALL_POSITIVE: 0.8673
+F1_POSITIVE: 0.9289
 
 ROC-AUC:
 ------------------------------------------------------------
-ROC_AUC: 0.9323
+ROC_AUC: 0.9484
 
 ============================================================
 PLOTS:
 ------------------------------------------------------------
-Confusion Matrix: outputs\plots\xgboost_confusion_matrix.png
-ROC Curve: outputs\plots\xgboost_roc_curve.png
+Confusion Matrix: outputs\plots\support vector machine_confusion_matrix.png
+ROC Curve: outputs\plots\support vector machine_roc_curve.png

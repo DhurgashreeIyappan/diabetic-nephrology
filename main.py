@@ -36,6 +36,10 @@ from src import (
     train_xgboost_classifier,
     train_random_forest_classifier,
     train_svm_classifier,
+    train_lightgbm_classifier,
+    train_extra_trees_classifier,
+    tune_classifier,
+    build_stacking_classifier,
     save_model,
     load_model,
     evaluate_model,
@@ -103,201 +107,100 @@ def main():
     print(f"Class distribution: {class_counts.to_dict()}")
     print(f"Scale pos weight: {scale_pos_weight:.2f}")
     
-    # Step 3: Train XGBoost model
-    print("\n[Step 3/5] Training XGBoost model...")
-    
-    # Optional: Customize XGBoost parameters
-    xgb_params = {
-    'n_estimators': 500,
-    'max_depth': 6,
-    'learning_rate': 0.03,
-    'subsample': 0.9,
-    'colsample_bytree': 0.9,
-    'min_child_weight': 3,
-    'gamma': 0.1,
-    'reg_alpha': 0.1,
-    'reg_lambda': 1.0,
-    'scale_pos_weight': scale_pos_weight,
-    'objective': 'binary:logistic',
-    'eval_metric': 'logloss',
-    'random_state': 42
+    # Step 3: tune every base model on the same already-preprocessed training set.
+    print("\n[Step 3/6] Tuning models with stratified 5-fold ROC-AUC...")
+    from xgboost import XGBClassifier
+    from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
+    from sklearn.svm import SVC
+    from lightgbm import LGBMClassifier
+
+    tuned_models = {}
+    tuned_models['XGBoost'], xgb_search = tune_classifier(
+        XGBClassifier(objective='binary:logistic', eval_metric='logloss', random_state=42, n_jobs=1,
+                      scale_pos_weight=scale_pos_weight),
+        {'n_estimators': [200, 300, 500], 'max_depth': [3, 4, 6], 'learning_rate': [0.01, 0.03, 0.05],
+         'subsample': [0.7, 0.8, 0.9], 'colsample_bytree': [0.7, 0.8, 0.9], 'min_child_weight': [1, 3, 5]},
+        X_train, y_train)
+    tuned_models['Random Forest'], rf_search = tune_classifier(
+        RandomForestClassifier(random_state=42, n_jobs=1),
+        {'n_estimators': [200, 300, 500], 'max_depth': [None, 5, 10, 20],
+         'min_samples_split': [2, 5, 10], 'min_samples_leaf': [1, 2, 4], 'max_features': ['sqrt', 'log2', None]},
+        X_train, y_train)
+    tuned_models['Support Vector Machine'], svm_search = tune_classifier(
+        SVC(probability=True, random_state=42),
+        {'C': [0.1, 1, 10, 100], 'kernel': ['rbf', 'linear'], 'gamma': ['scale', 'auto', 0.01, 0.1]},
+        X_train, y_train)
+    tuned_models['LightGBM'], lgbm_search = tune_classifier(
+        LGBMClassifier(objective='binary', random_state=42, verbosity=-1, n_jobs=1),
+        {'n_estimators': [200, 300, 500], 'learning_rate': [0.01, 0.03, 0.05], 'num_leaves': [15, 31, 63],
+         'max_depth': [-1, 4, 6, 10], 'subsample': [0.7, 0.8, 0.9], 'colsample_bytree': [0.7, 0.8, 0.9]},
+        X_train, y_train)
+    tuned_models['Extra Trees'], et_search = tune_classifier(
+        ExtraTreesClassifier(random_state=42, n_jobs=1),
+        {'n_estimators': [200, 300, 500], 'max_depth': [None, 5, 10, 20],
+         'min_samples_split': [2, 5, 10], 'min_samples_leaf': [1, 2, 4], 'max_features': ['sqrt', 'log2', None]},
+        X_train, y_train)
+
+    # The final proposed model uses all tuned base estimators and Logistic Regression.
+    stacking_model = build_stacking_classifier(
+        tuned_models['XGBoost'], tuned_models['Random Forest'], tuned_models['Support Vector Machine'],
+        tuned_models['LightGBM'], tuned_models['Extra Trees'])
+    stacking_model.fit(X_train, y_train)
+    tuned_models['Stacking Classifier'] = stacking_model
+
+    # Step 4: reuse the established evaluator for every candidate.
+    print("\n[Step 4/6] Evaluating all models...")
+    evaluation_by_model = {}
+    for name, candidate in tuned_models.items():
+        evaluation_by_model[name] = evaluate_model(candidate, X_test, y_test, PLOTS_DIR, name)
+
+    model_display_names = {
+        'XGBoost': 'XGBoost Classifier', 'Random Forest': 'Random Forest Classifier',
+        'Support Vector Machine': 'Support Vector Machine', 'LightGBM': 'LightGBM Classifier',
+        'Extra Trees': 'Extra Trees Classifier', 'Stacking Classifier': 'Stacking Classifier'
     }
-    
-    model = train_xgboost_classifier(
-        X_train=X_train,
-        y_train=y_train,
-        params=xgb_params,
-        random_state=42
-    )
-    from sklearn.model_selection import StratifiedKFold, cross_val_score
-
-    print("\nPerforming 5-Fold Cross Validation...")
-
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-
-    scores = cross_val_score(
-        model,
-        X_train,
-        y_train,
-        cv=cv,
-        scoring="accuracy"
-    )
-
-    print(f"Cross Validation Accuracy: {scores.mean():.2%}")
-    print(f"Fold Scores: {scores}")
-    
-    # Train Random Forest
-    print("\nTraining Random Forest model...")
-    rf_model = train_random_forest_classifier(
-        X_train=X_train,
-        y_train=y_train,
-        random_state=42
-    )
-    
-    # Train SVM
-    print("\nTraining SVM model...")
-    svm_model = train_svm_classifier(
-        X_train=X_train,
-        y_train=y_train,
-        random_state=42
-    )
-
-    # Step 4: Save trained models
-    print("\n[Step 4/5] Saving trained models...")
-    model_path = save_model(
-        model=model,
-        model_path=MODELS_DIR,
-        model_name=MODEL_NAME
-    )
-    
-    rf_model_path = save_model(
-        model=rf_model,
-        model_path=MODELS_DIR,
-        model_name='random_forest_diabetic_nephropathy.joblib'
-    )
-    
-    svm_model_path = save_model(
-        model=svm_model,
-        model_path=MODELS_DIR,
-        model_name='svm_diabetic_nephropathy.joblib'
-    )
-    
-    # Step 5: Evaluate models
-    print("\n[Step 5/5] Evaluating models...")
-    evaluation_results = evaluate_model(
-        model=model,
-        X_test=X_test,
-        y_test=y_test,
-        plots_dir=PLOTS_DIR,
-        model_name="XGBoost"
-    )
-    
-    rf_evaluation_results = evaluate_model(
-        model=rf_model,
-        X_test=X_test,
-        y_test=y_test,
-        plots_dir=PLOTS_DIR,
-        model_name="Random Forest"
-    )
-    
-    svm_evaluation_results = evaluate_model(
-        model=svm_model,
-        X_test=X_test,
-        y_test=y_test,
-        plots_dir=PLOTS_DIR,
-        model_name="SVM"
-    )
-    
-    # Compare all three models
     models_metrics = {
-        'XGBoost': {
-            'accuracy': float(evaluation_results['metrics']['accuracy']),
-            'precision': float(evaluation_results['metrics']['precision']),
-            'recall': float(evaluation_results['metrics']['recall']),
-            'f1': float(evaluation_results['metrics']['f1_score']),
-            'roc_auc': float(evaluation_results['metrics']['roc_auc'] or 0.0),
-            'model_name': 'XGBoost Classifier'
-        },
-        'Random Forest': {
-            'accuracy': float(rf_evaluation_results['metrics']['accuracy']),
-            'precision': float(rf_evaluation_results['metrics']['precision']),
-            'recall': float(rf_evaluation_results['metrics']['recall']),
-            'f1': float(rf_evaluation_results['metrics']['f1_score']),
-            'roc_auc': float(rf_evaluation_results['metrics']['roc_auc'] or 0.0),
-            'model_name': 'Random Forest Classifier'
-        },
-        'Support Vector Machine': {
-            'accuracy': float(svm_evaluation_results['metrics']['accuracy']),
-            'precision': float(svm_evaluation_results['metrics']['precision']),
-            'recall': float(svm_evaluation_results['metrics']['recall']),
-            'f1': float(svm_evaluation_results['metrics']['f1_score']),
-            'roc_auc': float(svm_evaluation_results['metrics']['roc_auc'] or 0.0),
-            'model_name': 'Support Vector Machine'
-        }
+        name: {
+            'accuracy': float(result['metrics']['accuracy']), 'precision': float(result['metrics']['precision']),
+            'recall': float(result['metrics']['recall']), 'f1': float(result['metrics']['f1_score']),
+            'roc_auc': float(result['metrics']['roc_auc'] or 0.0), 'model_name': model_display_names[name]
+        } for name, result in evaluation_by_model.items()
     }
-    
-    # Sort models by Accuracy (descending), ROC-AUC (descending), and F1 Score (descending)
-    sorted_models = sorted(
-        models_metrics.keys(),
-        key=lambda k: (models_metrics[k]['accuracy'], models_metrics[k]['roc_auc'], models_metrics[k]['f1']),
-        reverse=True
-    )
-    best_model_key = sorted_models[0]
-    best_model_metrics = models_metrics[best_model_key]
-    
-    # Retrieve the best model object
-    best_model_obj = None
-    if best_model_key == 'XGBoost':
-        best_model_obj = model
-    elif best_model_key == 'Random Forest':
-        best_model_obj = rf_model
-    else:
-        best_model_obj = svm_model
-        
-    # Save the selected best model as the final prediction model.
-    final_model_path = save_model(
-        model=best_model_obj,
-        model_path=MODELS_DIR,
-        model_name='final_prediction_model.joblib'
-    )
 
-    # Create one professional comparison table for the console and report.
-    model_order = ['XGBoost', 'Random Forest', 'Support Vector Machine']
-    table_border = '+' + '-' * 26 + '+' + '-' * 10 + '+' + '-' * 11 + '+' + '-' * 8 + '+' + '-' * 10 + '+' + '-' * 10 + '+'
+    # ROC-AUC alone determines the final deployed model.
+    best_model_key = max(models_metrics, key=lambda name: models_metrics[name]['roc_auc'])
+    best_model_metrics = models_metrics[best_model_key]
+    best_model_obj = tuned_models[best_model_key]
+    final_model_path = save_model(best_model_obj, MODELS_DIR, 'final_prediction_model.joblib')
+
+    # Professional console table and the required publication-ready reports.
+    model_order = ['XGBoost', 'Random Forest', 'Support Vector Machine', 'LightGBM', 'Extra Trees', 'Stacking Classifier']
+    table_border = '-' * 63
     table_lines = [
-        '=' * 62,
-        '      MODEL COMPARISON AFTER FEATURE SELECTION',
-        '=' * 62,
-        '',
         table_border,
-        '| Model                    | Accuracy | Precision | Recall | F1 Score | ROC-AUC  |',
+        f"{'Model':<25} {'Accuracy':<10} {'Precision':<11} {'Recall':<8} {'F1':<5}   {'ROC-AUC'}",
         table_border
     ]
     for name in model_order:
         metrics = models_metrics[name]
         table_lines.append(
-            f"| {name:<24} | {metrics['accuracy']:<8.4f} | "
-            f"{metrics['precision']:<9.4f} | {metrics['recall']:<6.4f} | "
-            f"{metrics['f1']:<8.4f} | {metrics['roc_auc']:<8.4f} |"
+            f"{name:<25} {metrics['accuracy']:<10.4f} {metrics['precision']:<11.4f} {metrics['recall']:<8.4f} {metrics['f1']:<5.4f}   {metrics['roc_auc']:.4f}"
         )
     table_lines.extend([
         table_border,
-        '',
-        '=' * 62,
-        'BEST MODEL',
-        '=' * 62,
-        '',
+        "",
+        "BEST MODEL",
+        "",
         best_model_key
     ])
     comparison_output = '\n'.join(table_lines)
 
-    # Save the comparison CSV with its established column format.
-    comparison_path = Path(REPORTS_DIR) / 'model_comparison_feature_selection.csv'
+    comparison_path = Path(REPORTS_DIR) / 'model_comparison.csv'
     comparison_path.parent.mkdir(parents=True, exist_ok=True)
     with open(comparison_path, 'w', newline='', encoding='utf-8') as csv_file:
         writer = csv.DictWriter(
             csv_file,
-            fieldnames=['Model', 'Accuracy', 'Precision', 'Recall', 'F1_score', 'Roc_auc']
+            fieldnames=['Model', 'Accuracy', 'Precision', 'Recall', 'F1-score', 'ROC-AUC']
         )
         writer.writeheader()
         for name in model_order:
@@ -307,24 +210,24 @@ def main():
                 'Accuracy': f"{metrics['accuracy']:.4f}",
                 'Precision': f"{metrics['precision']:.4f}",
                 'Recall': f"{metrics['recall']:.4f}",
-                'F1_score': f"{metrics['f1']:.4f}",
-                'Roc_auc': f"{metrics['roc_auc']:.4f}"
+                'F1-score': f"{metrics['f1']:.4f}",
+                'ROC-AUC': f"{metrics['roc_auc']:.4f}"
             })
 
-    comparison_report_path = Path(REPORTS_DIR) / 'model_comparison_feature_selection_report.txt'
+    comparison_report_path = Path(REPORTS_DIR) / 'model_comparison.txt'
     with open(comparison_report_path, 'w', encoding='utf-8') as report_file:
         report_file.write(comparison_output + '\n')
 
     print('\n' + comparison_output)
     
-    # Save evaluation report
+    # Preserve the established single-model evaluation report for the selected model.
     report_path = Path(REPORTS_DIR) / 'evaluation_report.txt'
-    save_evaluation_report(evaluation_results, str(report_path))
+    save_evaluation_report(evaluation_by_model[best_model_key], str(report_path))
     
     # Step 6: SHAP Analysis (Explainable AI)
     print("\n[Step 6/6] Running SHAP analysis for model explainability...")
     shap_results = run_shap_analysis(
-        model=model,
+        model=best_model_obj,
         X_train=X_train,
         X_test=X_test,
         plots_dir=PLOTS_DIR,
@@ -341,7 +244,7 @@ def main():
     print(f"\nSaving pipeline metadata and metrics to {metadata_path}...")
     import json
     metadata = {
-        'model_name': 'XGBoost Classifier',
+        'model_name': best_model_metrics['model_name'],
         'dataset_name': Path(DATASET_PATH).name,
         'dataset_size': int(df.shape[0]),
         'num_features': int(X_train.shape[1]),
@@ -350,12 +253,12 @@ def main():
         'prediction_classes': int(y_train.nunique()),
         'model_status': 'Trained Successfully',
         'explainability': 'SHAP Enabled',
-        'accuracy': float(evaluation_results['metrics']['accuracy']),
-        'cv_accuracy': float(scores.mean()),
-        'precision': float(evaluation_results['metrics']['precision']),
-        'recall': float(evaluation_results['metrics']['recall']),
-        'f1_score': float(evaluation_results['metrics']['f1_score']),
-        'roc_auc': float(evaluation_results['metrics']['roc_auc']),
+        'accuracy': float(best_model_metrics['accuracy']),
+        'cv_accuracy': float(max(search.best_score_ for search in [xgb_search, rf_search, svm_search, lgbm_search, et_search])),
+        'precision': float(best_model_metrics['precision']),
+        'recall': float(best_model_metrics['recall']),
+        'f1_score': float(best_model_metrics['f1']),
+        'roc_auc': float(best_model_metrics['roc_auc']),
         'comparison': models_metrics,
         'best_model': {
             'name': best_model_metrics['model_name'],
@@ -371,7 +274,7 @@ def main():
     print("\n" + "="*60)
     print("PIPELINE COMPLETED SUCCESSFULLY")
     print("="*60)
-    print(f"\nModel saved to: {model_path}")
+    print(f"\nFinal model saved to: {final_model_path}")
     print(f"Evaluation report saved to: {report_path}")
     print(f"SHAP analysis report saved to: {shap_report_path}")
     print(f"Pipeline metadata saved to: {metadata_path}")

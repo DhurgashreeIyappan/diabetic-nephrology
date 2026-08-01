@@ -6,6 +6,7 @@ openpyxl
 # Machine Learning
 scikit-learn
 xgboost
+lightgbm
 
 # Explainable AI
 shap

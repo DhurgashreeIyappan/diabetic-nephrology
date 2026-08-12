@@ -482,14 +482,6 @@ def load_pipeline_metrics_and_metadata():
                 'f1': 0.8581,
                 'roc_auc': 0.9250,
                 'model_name': 'Random Forest Classifier'
-            },
-            'Support Vector Machine': {
-                'accuracy': 0.8407,
-                'precision': 0.8420,
-                'recall': 0.8407,
-                'f1': 0.8398,
-                'roc_auc': 0.9100,
-                'model_name': 'Support Vector Machine'
             }
         },
         'best_model': {
@@ -1105,7 +1097,11 @@ def display_shap_explanation(model, input_df, feature_names):
     
     try:
         # Initialize SHAP explainer (tree-based or model-agnostic for ensemble models)
-        tree_model_names = {'XGBClassifier', 'RandomForestClassifier', 'ExtraTreesClassifier', 'LGBMClassifier'}
+        tree_model_names = {'XGBClassifier', 'RandomForestClassifier', 'ExtraTreesClassifier', 'LGBMClassifier',
+                            ########## NEW CATBOOST CODE ##########
+                            'CatBoostClassifier'
+                            ########## NEW CATBOOST CODE ##########
+                            }
         if model.__class__.__name__ in tree_model_names:
             explainer = shap.TreeExplainer(model)
             shap_values = explainer.shap_values(input_df)
@@ -1276,9 +1272,1039 @@ def display_shap_explanation(model, input_df, feature_names):
         # Add table caption
         st.markdown('<p style="font-size: 0.9rem; color: #7f8c8d; margin-top: 0.5rem; font-style: italic;">The table shows how each feature influenced the current prediction using SHAP values.</p>', unsafe_allow_html=True)
         
+        return top_features
+        
     except Exception as e:
         st.error(f"Error generating SHAP explanation: {e}")
         st.info("SHAP explanation could not be generated. This may be due to model compatibility issues.")
+        return None
+
+
+def get_feature_status_and_explanation(feature, val, shap_val):
+    """
+    Generate status, clinical relevance, and SHAP influence explanation for a given feature.
+    
+    Returns:
+        tuple: (val_str, status_str, explanation_str)
+    """
+    if isinstance(val, (int, float)):
+        if isinstance(val, float) and val % 1 != 0:
+            val_str = f"{val:.2f}"
+        else:
+            val_str = f"{int(val)}"
+    else:
+        val_str = str(val) if val is not None else "N/A"
+        
+    f_lower = feature.lower()
+    shap_direction = "increased the predicted risk of diabetic nephropathy" if shap_val > 0 else "decreased the predicted risk of diabetic nephropathy"
+    
+    status = "Evaluated"
+    explanation = ""
+    
+    if 'hba1c' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 0.0
+        val_str += "%"
+        if num_val > 7.0:
+            status = "Elevated (Above Target)"
+            explanation = (
+                f"Your HbA1c level is {val_str}, which is above the recommended target range of 7.0%. "
+                f"Elevated HbA1c indicates higher average blood sugar over recent months. "
+                f"Persistent high blood glucose can cause vascular damage to kidney filtration units, and therefore this factor {shap_direction}."
+            )
+        else:
+            status = "Normal / Controlled"
+            explanation = (
+                f"Your HbA1c level is {val_str}, indicating well-controlled average blood sugar. "
+                f"Maintaining optimal glycemic control protects small microvascular vessels in the kidneys. "
+                f"This favorable reading {shap_direction}."
+            )
+            
+    elif 'egfr' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 90.0
+        val_str += " mL/min/1.73m²"
+        if num_val < 60.0:
+            status = "Reduced (Needs Attention)"
+            explanation = (
+                f"Your estimated Glomerular Filtration Rate (eGFR) is {val_str}, which is below normal range. "
+                f"eGFR measures how efficiently your kidneys filter waste products from the blood. "
+                f"A reduced filtration rate signals kidney impairment and therefore this factor {shap_direction}."
+            )
+        elif num_val < 90.0:
+            status = "Slightly Reduced"
+            explanation = (
+                f"Your eGFR level is {val_str}, indicating slightly reduced kidney filtration function. "
+                f"eGFR tracks renal clearance efficiency over time. "
+                f"This factor was evaluated by the model and {shap_direction}."
+            )
+        else:
+            status = "Normal / Healthy"
+            explanation = (
+                f"Your eGFR level is {val_str}, reflecting strong, healthy kidney filtration function. "
+                f"A normal eGFR indicates efficient removal of waste products from circulation. "
+                f"This healthy level {shap_direction}."
+            )
+            
+    elif 'uacr' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 0.0
+        val_str += " mg/g"
+        if num_val >= 300.0:
+            status = "High (Severely Elevated)"
+            explanation = (
+                f"Your Urine Albumin-to-Creatinine Ratio (UACR) is {val_str}, indicating high protein excretion. "
+                f"UACR detects protein leaking into urine, a primary hallmark of kidney filter damage. "
+                f"This significant elevation strongly contributed to the model's prediction and {shap_direction}."
+            )
+        elif num_val >= 30.0:
+            status = "Elevated (Microalbuminuria)"
+            explanation = (
+                f"Your UACR is {val_str}, indicating microalbuminuria (early protein leakage). "
+                f"Elevated UACR is an early sign of diabetic kidney strain. "
+                f"This factor was flagged by the model and {shap_direction}."
+            )
+        else:
+            status = "Normal (< 30 mg/g)"
+            explanation = (
+                f"Your UACR is {val_str}, which is within the optimal range (< 30 mg/g). "
+                f"Normal UACR confirms minimal protein leakage into the urine. "
+                f"This reassuring finding {shap_direction}."
+            )
+            
+    elif 'creatinine' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 1.0
+        val_str += " mg/dL"
+        if num_val > 1.2:
+            status = "Elevated"
+            explanation = (
+                f"Your serum creatinine level is {val_str}, which is higher than normal reference ranges. "
+                f"Creatinine is a waste product filtered by healthy kidneys; elevated blood levels indicate reduced renal clearance. "
+                f"Consequently, this factor {shap_direction}."
+            )
+        else:
+            status = "Normal Range"
+            explanation = (
+                f"Your serum creatinine level is {val_str}, falling within acceptable healthy limits. "
+                f"Normal serum creatinine suggests effective metabolic waste elimination by your kidneys. "
+                f"This parameter {shap_direction}."
+            )
+            
+    elif 'sbp' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 120.0
+        val_str += " mmHg"
+        if num_val >= 130.0:
+            status = "Elevated (High BP)"
+            explanation = (
+                f"Your Systolic Blood Pressure (SBP) is {val_str}, which exceeds the recommended clinical target. "
+                f"High blood pressure increases mechanical pressure on kidney vessels, accelerating renal strain. "
+                f"Because of this pressure, SBP {shap_direction}."
+            )
+        else:
+            status = "Normal / Controlled"
+            explanation = (
+                f"Your Systolic Blood Pressure is {val_str}, maintaining a healthy pressure level. "
+                f"Optimal blood pressure minimizes physical stress on sensitive renal glomeruli. "
+                f"This controlled reading {shap_direction}."
+            )
+
+    elif 'dbp' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 80.0
+        val_str += " mmHg"
+        if num_val >= 80.0:
+            status = "Elevated (High BP)"
+            explanation = (
+                f"Your Diastolic Blood Pressure (DBP) is {val_str}, which is elevated. "
+                f"Diastolic pressure measures vascular resistance when the heart rests, impacting kidney vessel health. "
+                f"This elevated reading {shap_direction}."
+            )
+        else:
+            status = "Normal"
+            explanation = (
+                f"Your Diastolic Blood Pressure is {val_str}, resting within normal limits. "
+                f"Healthy diastolic pressure helps prevent microvascular strain in renal tissue. "
+                f"This positive reading {shap_direction}."
+            )
+
+    elif 'duration' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 0.0
+        val_str += " years"
+        if num_val >= 10.0:
+            status = "Long Duration (≥ 10 years)"
+            explanation = (
+                f"You have had diabetes for {val_str}. "
+                f"Longer diabetes duration increases total exposure to blood sugar fluctuations and potential vascular wear. "
+                f"This factor {shap_direction}."
+            )
+        else:
+            status = "Shorter Duration (< 10 years)"
+            explanation = (
+                f"Your diabetes duration is {val_str}. "
+                f"A shorter history of diabetes reduces total years of microvascular risk exposure. "
+                f"This factor {shap_direction}."
+            )
+
+    elif 'bmi' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 22.0
+        val_str += " kg/m²"
+        if num_val >= 25.0:
+            status = "Elevated (Overweight/Obese)"
+            explanation = (
+                f"Your Body Mass Index (BMI) is {val_str}, placing you above the standard healthy weight range. "
+                f"Higher body weight places additional metabolic demand and filtration stress on the kidneys. "
+                f"As a result, BMI {shap_direction}."
+            )
+        else:
+            status = "Normal Weight Range"
+            explanation = (
+                f"Your BMI is {val_str}, which is within the recommended healthy weight range. "
+                f"Maintaining healthy weight reduces hyperfiltration stress on kidney nephrons. "
+                f"This healthy range {shap_direction}."
+            )
+
+    elif 'triglycerides' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 100.0
+        val_str += " mg/dL"
+        if num_val >= 150.0:
+            status = "High (≥ 150 mg/dL)"
+            explanation = (
+                f"Your Triglyceride level is {val_str}, which is above the recommended target range (< 150 mg/dL). "
+                f"High triglycerides contribute to lipid deposition and oxidative stress in renal tissue. "
+                f"Therefore, this lipid factor {shap_direction}."
+            )
+        else:
+            status = "Normal (< 150 mg/dL)"
+            explanation = (
+                f"Your Triglyceride level is {val_str}, which is well within healthy limits. "
+                f"Normal lipid levels support optimal vascular health and clear circulation. "
+                f"This favorable lipid metric {shap_direction}."
+            )
+
+    elif 'hdl' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 50.0
+        val_str += " mg/dL"
+        if num_val < 40.0:
+            status = "Low (< 40 mg/dL)"
+            explanation = (
+                f"Your HDL cholesterol is {val_str}, which is below protective target levels. "
+                f"HDL is 'good' cholesterol that clears excess lipids from blood vessel walls. "
+                f"Lower HDL reduces vascular protection and therefore {shap_direction}."
+            )
+        else:
+            status = "Normal / Desirable"
+            explanation = (
+                f"Your HDL cholesterol is {val_str}, meeting desirable protective targets. "
+                f"Adequate HDL cholesterol supports blood vessel health and guards against microvascular complications. "
+                f"This healthy level {shap_direction}."
+            )
+
+    elif 'ldl' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 90.0
+        val_str += " mg/dL"
+        if num_val >= 100.0:
+            status = "Elevated (≥ 100 mg/dL)"
+            explanation = (
+                f"Your LDL cholesterol is {val_str}, which exceeds optimal target levels. "
+                f"Elevated LDL can cause arterial plaque buildup, compromising renal blood flow. "
+                f"This elevation {shap_direction}."
+            )
+        else:
+            status = "Optimal (< 100 mg/dL)"
+            explanation = (
+                f"Your LDL cholesterol is {val_str}, keeping within optimal targets. "
+                f"Healthy LDL levels prevent arterial plaque accumulation and preserve clear circulation. "
+                f"This optimal reading {shap_direction}."
+            )
+
+    elif 'cholesterol' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 180.0
+        val_str += " mg/dL"
+        if num_val >= 200.0:
+            status = "High (≥ 200 mg/dL)"
+            explanation = (
+                f"Your total cholesterol level is {val_str}, which is elevated. "
+                f"Higher total cholesterol increases overall vascular strain across major organ systems including the kidneys. "
+                f"This parameter {shap_direction}."
+            )
+        else:
+            status = "Normal (< 200 mg/dL)"
+            explanation = (
+                f"Your total cholesterol is {val_str}, remaining in the healthy target range. "
+                f"A balanced lipid profile reduces systemic vascular inflammation. "
+                f"This factor {shap_direction}."
+            )
+
+    elif 'dr' in f_lower or 'retinopathy' in f_lower:
+        is_yes = (str(val).strip().lower() in ['yes', '1', 'true'])
+        status = "Present" if is_yes else "Absent"
+        if is_yes:
+            explanation = (
+                f"Diabetic Retinopathy is present in your clinical profile. "
+                f"Retinopathy reflects existing damage to small eye microvessels, which closely correlates with microvascular changes in the kidneys. "
+                f"This clinical finding {shap_direction}."
+            )
+        else:
+            explanation = (
+                f"Diabetic Retinopathy is absent in your clinical profile. "
+                f"The absence of eye microvascular damage suggests healthier overall microvasculature. "
+                f"This positive indicator {shap_direction}."
+            )
+
+    elif 'age' in f_lower:
+        num_val = float(val) if isinstance(val, (int, float)) else 50.0
+        val_str += " years"
+        if num_val >= 60.0:
+            status = "Older Age Group (≥ 60)"
+            explanation = (
+                f"Your age is {val_str}. "
+                f"Advancing age naturally reduces baseline renal functional reserve and increases susceptibility to diabetes-related kidney changes. "
+                f"This baseline factor {shap_direction}."
+            )
+        else:
+            status = "Younger / Middle Age"
+            explanation = (
+                f"Your age is {val_str}. "
+                f"Younger age generally preserves baseline physiological renal reserve. "
+                f"This age profile {shap_direction}."
+            )
+
+    elif 'smoking' in f_lower:
+        is_yes = (str(val).strip().lower() in ['yes', '1', 'true'])
+        status = "Yes (Active)" if is_yes else "No (Non-smoker)"
+        if is_yes:
+            explanation = (
+                f"Smoking status is listed as Yes. "
+                f"Smoking restricts renal blood flow, accelerates arterial stiffness, and promotes inflammation in kidney nephrons. "
+                f"This lifestyle factor {shap_direction}."
+            )
+        else:
+            explanation = (
+                f"Smoking status is listed as No. "
+                f"Not smoking avoids tobacco-induced microvascular toxicity and renal vasoconstriction. "
+                f"This healthy habit {shap_direction}."
+            )
+
+    else:
+        explanation = (
+            f"The clinical feature '{feature}' has a patient value of {val_str}. "
+            f"Based on the trained AI model's decision tree structure, this factor {shap_direction}."
+        )
+
+    return val_str, status, explanation
+
+
+def generate_personalized_recommendations(user_inputs, importance_df=None, risk_category="Low Risk"):
+    """
+    Generate dynamic, patient-specific health recommendations based on:
+    1. Actual current patient input values
+    2. Clinical reference range evaluation
+    3. Existing SHAP feature importance for priority ranking
+    4. Prediction risk category context
+    """
+    shap_lookup = {}
+    if importance_df is not None and not importance_df.empty:
+        for idx, row in importance_df.iterrows():
+            feat = str(row['Feature'])
+            shap_lookup[feat] = {
+                'shap_val': float(row['SHAP Value']),
+                'abs_shap': abs(float(row['SHAP Value'])),
+                'rank': idx + 1
+            }
+
+    def get_shap_info(feature_key):
+        for k, v in shap_lookup.items():
+            if feature_key.lower() in k.lower():
+                return v
+        return {'shap_val': 0.0, 'abs_shap': 0.0, 'rank': 99}
+
+    flagged = []
+    if not user_inputs:
+        return flagged
+
+    # 1. HbA1c
+    hba1c = user_inputs.get('HbA1c', None)
+    if hba1c is not None:
+        try:
+            val = float(hba1c)
+            if val > 7.0:
+                shap_info = get_shap_info('hba1c')
+                is_high = shap_info['shap_val'] > 0 or shap_info['rank'] <= 5 or risk_category == "High Risk"
+                prio_tag = "🔴 High Priority" if is_high else "🟠 Moderate Priority"
+                color = "#e74c3c" if is_high else "#f39c12"
+                msg = f"Your HbA1c is <strong>{val:.1f}%</strong>, which is elevated above the 7.0% recommended target. Better long-term blood sugar control may help reduce the risk of diabetes-related complications."
+                sort_score = (100 if is_high else 50) + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Blood Sugar', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 2. Fasting Blood Glucose
+    fbg = user_inputs.get('FBG_(mmol/L)', user_inputs.get('FBG', None))
+    if fbg is not None:
+        try:
+            val = float(fbg)
+            if val > 7.0:
+                shap_info = get_shap_info('fbg')
+                is_high = shap_info['shap_val'] > 0 or shap_info['rank'] <= 5
+                prio_tag = "🔴 High Priority" if is_high else "🟠 Moderate Priority"
+                color = "#e74c3c" if is_high else "#f39c12"
+                msg = f"Your fasting blood glucose is <strong>{val:.1f} mmol/L</strong>, which is elevated. Monitoring and optimizing daily blood glucose management is recommended."
+                sort_score = (95 if is_high else 45) + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Fasting Blood Glucose', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 3. Systolic & Diastolic Blood Pressure
+    sbp = user_inputs.get('SBP', user_inputs.get('SBP_(mmHg)_', None))
+    dbp = user_inputs.get('DBP', user_inputs.get('DBP_(mmHg)', None))
+    if sbp is not None or dbp is not None:
+        try:
+            sbp_val = float(sbp) if sbp is not None else 120.0
+            dbp_val = float(dbp) if dbp is not None else 80.0
+            if sbp_val >= 130.0 or dbp_val >= 80.0:
+                shap_info = get_shap_info('sbp') if sbp_val >= 130 else get_shap_info('dbp')
+                is_high = shap_info['shap_val'] > 0 or shap_info['rank'] <= 5 or risk_category == "High Risk"
+                prio_tag = "🔴 High Priority" if is_high else "🟠 Moderate Priority"
+                color = "#e74c3c" if is_high else "#f39c12"
+                
+                if sbp_val >= 130.0 and dbp_val >= 80.0:
+                    bp_msg = f"Your systolic blood pressure is <strong>{int(sbp_val)} mmHg</strong> and diastolic blood pressure is <strong>{int(dbp_val)} mmHg</strong>, which are elevated."
+                elif sbp_val >= 130.0:
+                    bp_msg = f"Your systolic blood pressure is <strong>{int(sbp_val)} mmHg</strong>, which is elevated."
+                else:
+                    bp_msg = f"Your diastolic blood pressure is <strong>{int(dbp_val)} mmHg</strong>, which is elevated."
+                
+                msg = f"{bp_msg} Regular monitoring and appropriate blood-pressure management should be discussed with your healthcare provider."
+                sort_score = (90 if is_high else 40) + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Blood Pressure', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 4. eGFR
+    egfr = user_inputs.get('eGFR', user_inputs.get('eGFR_(mL/min/1.73m2)', None))
+    if egfr is not None:
+        try:
+            val = float(egfr)
+            if val < 60.0:
+                shap_info = get_shap_info('egfr')
+                prio_tag = "🔴 High Priority"
+                color = "#e74c3c"
+                msg = f"Your estimated Glomerular Filtration Rate (eGFR) is <strong>{val:.1f} mL/min/1.73m²</strong>, indicating reduced kidney filtration function. Prompt specialist evaluation and follow-up laboratory testing are recommended."
+                sort_score = 110 + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Kidney Filtration (eGFR)', 'msg': msg, 'score': sort_score, 'color': color})
+            elif val < 90.0:
+                shap_info = get_shap_info('egfr')
+                prio_tag = "🟠 Moderate Priority"
+                color = "#f39c12"
+                msg = f"Your eGFR is <strong>{val:.1f} mL/min/1.73m²</strong>, indicating slightly reduced filtration function. Routine renal monitoring is advisable."
+                sort_score = 35 + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Kidney Filtration (eGFR)', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 5. UACR
+    uacr = user_inputs.get('UACR', user_inputs.get('UACR_(mg/g)', None))
+    if uacr is not None:
+        try:
+            val = float(uacr)
+            if val >= 30.0:
+                shap_info = get_shap_info('uacr')
+                is_high = val >= 300.0 or shap_info['shap_val'] > 0 or shap_info['rank'] <= 5
+                prio_tag = "🔴 High Priority" if is_high else "🟠 Moderate Priority"
+                color = "#e74c3c" if is_high else "#f39c12"
+                severity_str = "macroalbuminuria" if val >= 300 else "microalbuminuria"
+                msg = f"Your Urine Albumin-to-Creatinine Ratio (UACR) is <strong>{val:.1f} mg/g</strong>, indicating {severity_str} (protein leaking into urine). Discuss initiating or optimizing kidney-protective therapy with your physician."
+                sort_score = (105 if is_high else 45) + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Urine Protein Excretion (UACR)', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 6. Serum Creatinine
+    creat = user_inputs.get('Serum creatinine', user_inputs.get('Serum_creatinine', None))
+    if creat is not None:
+        try:
+            val = float(creat)
+            if val > 1.2:
+                shap_info = get_shap_info('creatinine')
+                is_high = shap_info['shap_val'] > 0 or shap_info['rank'] <= 5
+                prio_tag = "🔴 High Priority" if is_high else "🟠 Moderate Priority"
+                color = "#e74c3c" if is_high else "#f39c12"
+                msg = f"Your serum creatinine is <strong>{val:.2f} mg/dL</strong>, which is elevated above normal reference ranges. High serum creatinine indicates reduced renal waste clearance."
+                sort_score = (85 if is_high else 38) + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Serum Creatinine', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 7. HDL Cholesterol
+    hdl = user_inputs.get('HDL', user_inputs.get('HDLC?mmoll?', user_inputs.get('HDL-C', None)))
+    if hdl is not None:
+        try:
+            val = float(hdl)
+            if val < 40.0:
+                shap_info = get_shap_info('hdl')
+                is_high = shap_info['shap_val'] > 0 and shap_info['rank'] <= 5
+                prio_tag = "🔴 High Priority" if is_high else "🟠 Moderate Priority"
+                color = "#e74c3c" if is_high else "#f39c12"
+                msg = f"Your HDL-C is <strong>{val:.1f} mg/dL</strong>, which is below protective target levels. Healthy lifestyle measures, balanced diet, and physical activity may support a healthier lipid profile."
+                sort_score = (70 if is_high else 30) + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'HDL-C / Lipid Health', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 8. Triglycerides
+    tg = user_inputs.get('Triglycerides', user_inputs.get('TG?mmoll?', user_inputs.get('TG', None)))
+    if tg is not None:
+        try:
+            val = float(tg)
+            if val >= 150.0:
+                shap_info = get_shap_info('triglycerides')
+                is_high = shap_info['shap_val'] > 0 and shap_info['rank'] <= 5
+                prio_tag = "🔴 High Priority" if is_high else "🟠 Moderate Priority"
+                color = "#e74c3c" if is_high else "#f39c12"
+                msg = f"Your triglyceride level is <strong>{val:.1f} mg/dL</strong>, which is elevated. Attention to diet, physical activity, and lipid monitoring is recommended."
+                sort_score = (65 if is_high else 28) + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Triglyceride Management', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 9. LDL Cholesterol
+    ldl = user_inputs.get('LDL', user_inputs.get('LDLC?mmoll?', None))
+    if ldl is not None:
+        try:
+            val = float(ldl)
+            if val >= 100.0:
+                shap_info = get_shap_info('ldl')
+                prio_tag = "🟠 Moderate Priority"
+                color = "#f39c12"
+                msg = f"Your LDL cholesterol is <strong>{val:.1f} mg/dL</strong>, which exceeds optimal targets. Managing LDL cholesterol reduces arterial plaque accumulation and preserves kidney blood flow."
+                sort_score = 25 + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'LDL Cholesterol', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 10. Total Cholesterol
+    tc = user_inputs.get('Cholesterol', user_inputs.get('TC?mmoll?', None))
+    if tc is not None:
+        try:
+            val = float(tc)
+            if val >= 200.0:
+                shap_info = get_shap_info('cholesterol')
+                prio_tag = "🟠 Moderate Priority"
+                color = "#f39c12"
+                msg = f"Your total cholesterol is <strong>{val:.1f} mg/dL</strong>, which is elevated. Reviewing your lipid profile and dietary habits with your healthcare provider is recommended."
+                sort_score = 24 + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Total Cholesterol', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 11. BMI
+    bmi = user_inputs.get('BMI', user_inputs.get('BMI_(kg/m2)', None))
+    if bmi is not None:
+        try:
+            val = float(bmi)
+            if val >= 25.0:
+                shap_info = get_shap_info('bmi')
+                prio_tag = "🟠 Moderate Priority"
+                color = "#f39c12"
+                msg = f"Your Body Mass Index (BMI) is <strong>{val:.1f} kg/m²</strong>, placing you above the standard healthy weight range. Achieving gradual weight management reduces hyperfiltration stress on your kidneys."
+                sort_score = 20 + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Body Mass Index', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 12. Diabetes Duration
+    dur = user_inputs.get('Diabetes duration (y)', user_inputs.get('Diabetes_duration_(y)', None))
+    if dur is not None:
+        try:
+            val = float(dur)
+            if val >= 10.0:
+                shap_info = get_shap_info('duration')
+                prio_tag = "🟠 Moderate Priority"
+                color = "#f39c12"
+                msg = f"You have had diabetes for <strong>{int(val)} years</strong>. Longer diabetes duration can increase the likelihood of diabetes-related complications, including kidney problems, and therefore regular diabetes and kidney-health monitoring are recommended."
+                sort_score = 32 + shap_info['abs_shap'] * 10
+                flagged.append({'tag': prio_tag, 'title': 'Diabetes Duration', 'msg': msg, 'score': sort_score, 'color': color})
+        except (ValueError, TypeError):
+            pass
+
+    # 13. Diabetic Retinopathy
+    dr = user_inputs.get('Diabetic Retinopathy (DR)', user_inputs.get('DR', user_inputs.get('Diabetic_retinopathy_(DR)', None)))
+    if dr is not None:
+        dr_str = str(dr).strip().lower()
+        if dr_str in ['yes', '1', 'true']:
+            shap_info = get_shap_info('retinopathy')
+            prio_tag = "🟠 Moderate Priority"
+            color = "#f39c12"
+            msg = f"Diabetic retinopathy is present in your clinical profile. Regular diabetes-related clinical follow-up is important because eye and kidney microvessels are closely connected."
+            sort_score = 34 + shap_info['abs_shap'] * 10
+            flagged.append({'tag': prio_tag, 'title': 'Diabetic Retinopathy', 'msg': msg, 'score': sort_score, 'color': color})
+
+    # 14. Smoking
+    smoke = user_inputs.get('Smoking', None)
+    if smoke is not None and str(smoke).strip().lower() in ['yes', '1', 'true']:
+        shap_info = get_shap_info('smoking')
+        prio_tag = "🟠 Moderate Priority"
+        color = "#f39c12"
+        msg = f"Smoking is listed as <strong>Yes</strong> in your profile. Smoking impairs renal microvascular blood flow; pursuing smoking cessation support is strongly recommended."
+        sort_score = 22 + shap_info['abs_shap'] * 10
+        flagged.append({'tag': prio_tag, 'title': 'Smoking Cessation', 'msg': msg, 'score': sort_score, 'color': color})
+
+    # Sort flagged recommendations by sort_score descending
+    flagged.sort(key=lambda x: x['score'], reverse=True)
+    return flagged
+
+
+def display_clinical_priority_list(user_inputs, importance_df=None):
+    """
+    Display 🧑‍⚕️ Clinical Priority List immediately after SHAP Feature Importance
+    and before AI Clinical Explanation.
+    
+    Args:
+        user_inputs: Dict of user inputs
+        importance_df: DataFrame of SHAP feature importances (optional)
+    """
+    st.markdown('<div class="sub-header">🧑‍⚕️ Clinical Priority List</div>', unsafe_allow_html=True)
+    
+    if not user_inputs:
+        st.info("No patient inputs available to generate priority list.")
+        return
+
+    # Build SHAP lookup dictionary
+    shap_lookup = {}
+    if importance_df is not None and not importance_df.empty:
+        for idx, row in importance_df.iterrows():
+            feat = str(row['Feature'])
+            shap_lookup[feat] = {
+                'shap_val': float(row['SHAP Value']),
+                'abs_shap': abs(float(row['SHAP Value'])),
+                'rank': idx + 1
+            }
+
+    def get_shap_info(feature_key):
+        for k, v in shap_lookup.items():
+            if feature_key.lower() in k.lower():
+                return v
+        return {'shap_val': 0.0, 'abs_shap': 0.0, 'rank': 99}
+
+    priorities = []
+
+    # 1. HbA1c
+    hba1c = user_inputs.get('HbA1c', user_inputs.get('HbA1c_(%)', None))
+    if hba1c is not None:
+        try:
+            val = float(hba1c)
+            if val > 7.0:
+                s_info = get_shap_info('hba1c')
+                score = 100 + s_info['abs_shap'] * 10 + (20 if s_info['shap_val'] > 0 else 0)
+                priorities.append({
+                    'name': 'HbA1c',
+                    'display_name': 'HbA1c',
+                    'val_str': f"{val:.1f}%",
+                    'status': 'High',
+                    'status_color': '#e74c3c',
+                    'explanation': 'Long-term blood sugar control needs attention.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 2. Fasting Blood Glucose
+    fbg = user_inputs.get('FBG_(mmol/L)', user_inputs.get('FBG', None))
+    if fbg is not None:
+        try:
+            val = float(fbg)
+            if val > 7.0:
+                s_info = get_shap_info('fbg')
+                score = 95 + s_info['abs_shap'] * 10
+                priorities.append({
+                    'name': 'FBG',
+                    'display_name': 'Fasting Blood Glucose',
+                    'val_str': f"{val:.1f} mmol/L",
+                    'status': 'High',
+                    'status_color': '#e74c3c',
+                    'explanation': 'Fasting blood sugar is elevated.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 3. Systolic Blood Pressure
+    sbp = user_inputs.get('SBP', user_inputs.get('SBP_(mmHg)_', None))
+    if sbp is not None:
+        try:
+            val = float(sbp)
+            if val >= 130.0:
+                s_info = get_shap_info('sbp')
+                score = 90 + s_info['abs_shap'] * 10 + (20 if s_info['shap_val'] > 0 else 0)
+                priorities.append({
+                    'name': 'SBP',
+                    'display_name': 'SBP',
+                    'val_str': f"{int(val)} mmHg",
+                    'status': 'High',
+                    'status_color': '#e74c3c',
+                    'explanation': 'Blood pressure should be monitored regularly.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 4. Diastolic Blood Pressure
+    dbp = user_inputs.get('DBP', user_inputs.get('DBP_(mmHg)', None))
+    if dbp is not None:
+        try:
+            val = float(dbp)
+            if val >= 80.0:
+                s_info = get_shap_info('dbp')
+                score = 85 + s_info['abs_shap'] * 10
+                priorities.append({
+                    'name': 'DBP',
+                    'display_name': 'DBP',
+                    'val_str': f"{int(val)} mmHg",
+                    'status': 'High',
+                    'status_color': '#e74c3c',
+                    'explanation': 'Diastolic blood pressure is elevated.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 5. eGFR
+    egfr = user_inputs.get('eGFR', user_inputs.get('eGFR_(mL/min/1.73m2)', None))
+    if egfr is not None:
+        try:
+            val = float(egfr)
+            if val < 60.0:
+                s_info = get_shap_info('egfr')
+                score = 110 + s_info['abs_shap'] * 10
+                priorities.append({
+                    'name': 'eGFR',
+                    'display_name': 'eGFR',
+                    'val_str': f"{val:.1f} mL/min/1.73m²",
+                    'status': 'Low',
+                    'status_color': '#e74c3c',
+                    'explanation': 'Kidney filtration rate is reduced.',
+                    'score': score
+                })
+            elif val < 90.0:
+                s_info = get_shap_info('egfr')
+                score = 45 + s_info['abs_shap'] * 10
+                priorities.append({
+                    'name': 'eGFR',
+                    'display_name': 'eGFR',
+                    'val_str': f"{val:.1f} mL/min/1.73m²",
+                    'status': 'Needs Attention',
+                    'status_color': '#f39c12',
+                    'explanation': 'Kidney filtration function is slightly reduced.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 6. UACR
+    uacr = user_inputs.get('UACR', user_inputs.get('UACR_(mg/g)', None))
+    if uacr is not None:
+        try:
+            val = float(uacr)
+            if val >= 30.0:
+                s_info = get_shap_info('uacr')
+                score = 105 + s_info['abs_shap'] * 10
+                status_str = 'High' if val >= 300 else 'Needs Attention'
+                color_str = '#e74c3c' if val >= 300 else '#f39c12'
+                priorities.append({
+                    'name': 'UACR',
+                    'display_name': 'UACR',
+                    'val_str': f"{val:.1f} mg/g",
+                    'status': status_str,
+                    'status_color': color_str,
+                    'explanation': 'Protein leakage into urine detected.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 7. Serum Creatinine
+    creat = user_inputs.get('Serum creatinine', user_inputs.get('Serum_creatinine', None))
+    if creat is not None:
+        try:
+            val = float(creat)
+            if val > 1.2:
+                s_info = get_shap_info('creatinine')
+                score = 80 + s_info['abs_shap'] * 10
+                priorities.append({
+                    'name': 'Serum Creatinine',
+                    'display_name': 'Serum Creatinine',
+                    'val_str': f"{val:.2f} mg/dL",
+                    'status': 'High',
+                    'status_color': '#e74c3c',
+                    'explanation': 'Serum creatinine level is above normal range.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 8. HDL Cholesterol
+    hdl = user_inputs.get('HDL', user_inputs.get('HDLC?mmoll?', user_inputs.get('HDL-C', None)))
+    if hdl is not None:
+        try:
+            val = float(hdl)
+            if val < 40.0:
+                s_info = get_shap_info('hdl')
+                score = 75 + s_info['abs_shap'] * 10
+                val_display = f"{val:.1f} mg/dL" if val > 5 else f"{val:.1f} mmol/L"
+                priorities.append({
+                    'name': 'HDL-C',
+                    'display_name': 'HDL-C',
+                    'val_str': val_display,
+                    'status': 'Low',
+                    'status_color': '#e74c3c',
+                    'explanation': 'HDL-C is below the desired level.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 9. Triglycerides
+    tg = user_inputs.get('Triglycerides', user_inputs.get('TG?mmoll?', user_inputs.get('TG', None)))
+    if tg is not None:
+        try:
+            val = float(tg)
+            if val >= 150.0:
+                s_info = get_shap_info('triglycerides')
+                score = 70 + s_info['abs_shap'] * 10
+                val_display = f"{val:.1f} mg/dL" if val > 10 else f"{val:.1f} mmol/L"
+                priorities.append({
+                    'name': 'Triglycerides',
+                    'display_name': 'Triglycerides',
+                    'val_str': val_display,
+                    'status': 'High',
+                    'status_color': '#e74c3c',
+                    'explanation': 'Triglyceride level is elevated.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 10. LDL Cholesterol
+    ldl = user_inputs.get('LDL', user_inputs.get('LDLC?mmoll?', None))
+    if ldl is not None:
+        try:
+            val = float(ldl)
+            if val >= 100.0:
+                s_info = get_shap_info('ldl')
+                score = 65 + s_info['abs_shap'] * 10
+                val_display = f"{val:.1f} mg/dL" if val > 10 else f"{val:.1f} mmol/L"
+                priorities.append({
+                    'name': 'LDL-C',
+                    'display_name': 'LDL-C',
+                    'val_str': val_display,
+                    'status': 'High',
+                    'status_color': '#e74c3c',
+                    'explanation': 'LDL-C exceeds optimal target levels.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 11. Total Cholesterol
+    tc = user_inputs.get('Cholesterol', user_inputs.get('TC?mmoll?', None))
+    if tc is not None:
+        try:
+            val = float(tc)
+            if val >= 200.0:
+                s_info = get_shap_info('cholesterol')
+                score = 60 + s_info['abs_shap'] * 10
+                val_display = f"{val:.1f} mg/dL" if val > 10 else f"{val:.1f} mmol/L"
+                priorities.append({
+                    'name': 'Total Cholesterol',
+                    'display_name': 'Total Cholesterol',
+                    'val_str': val_display,
+                    'status': 'High',
+                    'status_color': '#e74c3c',
+                    'explanation': 'Total cholesterol is elevated.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 12. BMI
+    bmi = user_inputs.get('BMI', user_inputs.get('BMI_(kg/m2)', None))
+    if bmi is not None:
+        try:
+            val = float(bmi)
+            if val >= 25.0:
+                s_info = get_shap_info('bmi')
+                score = 55 + s_info['abs_shap'] * 10
+                priorities.append({
+                    'name': 'BMI',
+                    'display_name': 'BMI',
+                    'val_str': f"{val:.1f} kg/m²",
+                    'status': 'High',
+                    'status_color': '#f39c12',
+                    'explanation': 'Body Mass Index is above standard weight range.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 13. Diabetes Duration
+    dur = user_inputs.get('Diabetes duration (y)', user_inputs.get('Diabetes_duration_(y)', None))
+    if dur is not None:
+        try:
+            val = float(dur)
+            if val >= 10.0:
+                s_info = get_shap_info('duration')
+                score = 50 + s_info['abs_shap'] * 10
+                priorities.append({
+                    'name': 'Diabetes Duration',
+                    'display_name': 'Diabetes Duration',
+                    'val_str': f"{int(val)} years",
+                    'status': 'Needs Attention',
+                    'status_color': '#f39c12',
+                    'explanation': 'Long duration of diabetes increases risk exposure.',
+                    'score': score
+                })
+        except (ValueError, TypeError):
+            pass
+
+    # 14. Diabetic Retinopathy
+    dr = user_inputs.get('Diabetic Retinopathy (DR)', user_inputs.get('DR', user_inputs.get('Diabetic_retinopathy_(DR)', None)))
+    if dr is not None and str(dr).strip().lower() in ['yes', '1', 'true']:
+        s_info = get_shap_info('retinopathy')
+        score = 52 + s_info['abs_shap'] * 10
+        priorities.append({
+            'name': 'Diabetic Retinopathy',
+            'display_name': 'Diabetic Retinopathy',
+            'val_str': 'Present',
+            'status': 'Needs Attention',
+            'status_color': '#f39c12',
+            'explanation': 'Presence of eye microvascular complications.',
+            'score': score
+        })
+
+    # 15. Smoking
+    smoke = user_inputs.get('Smoking', None)
+    if smoke is not None and str(smoke).strip().lower() in ['yes', '1', 'true']:
+        s_info = get_shap_info('smoking')
+        score = 40 + s_info['abs_shap'] * 10
+        priorities.append({
+            'name': 'Smoking',
+            'display_name': 'Smoking',
+            'val_str': 'Yes',
+            'status': 'Needs Attention',
+            'status_color': '#f39c12',
+            'explanation': 'Smoking impairs renal microvascular blood flow.',
+            'score': score
+        })
+
+    # Sort by score descending
+    priorities.sort(key=lambda x: x['score'], reverse=True)
+
+    # Pick top 3 to 5 priorities
+    top_priorities = priorities[:5]
+
+    badge_emojis = ['🔴', '🟠', '🟡', '🔵', '🟣']
+    badge_colors = ['#e74c3c', '#e67e22', '#f1c40f', '#3498db', '#9b59b6']
+
+    if top_priorities:
+        for idx, item in enumerate(top_priorities, 1):
+            emoji = badge_emojis[idx - 1] if idx <= len(badge_emojis) else '📌'
+            card_border_color = badge_colors[idx - 1] if idx <= len(badge_colors) else '#95a5a6'
+            
+            st.markdown(f"""<div class="dashboard-card" style="margin-bottom: 0.9rem; padding: 1.1rem; border-left: 5px solid {card_border_color};">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 0.4rem;">
+<h5 style="margin: 0; font-size: 1.05rem; font-weight: bold; color: var(--text-color, #1a252f);">{emoji} Priority {idx} — {item['display_name']}</h5>
+<span style="font-size: 0.88rem; font-weight: bold; color: {item['status_color']};">Status: {item['status']}</span>
+</div>
+<p style="margin: 0 0 0.3rem 0; font-size: 0.95rem; color: var(--text-color, #4a5568);"><strong>Patient Value:</strong> <span style="color: #2b6cb0; font-weight: bold;">{item['val_str']}</span></p>
+<p style="margin: 0; font-size: 0.93rem; line-height: 1.5; color: var(--text-color, #2d3748);">{item['explanation']}</p>
+</div>""", unsafe_allow_html=True)
+    else:
+        # All normal case
+        st.markdown("""<div class="success-box" style="padding: 1.25rem;">
+<p style="margin: 0; font-size: 1.05rem; font-weight: bold; color: #155724;">🟢 No major clinical priorities identified. Continue regular monitoring.</p>
+</div>""", unsafe_allow_html=True)
+
+
+def display_ai_clinical_explanation(prediction, probability, user_inputs, importance_df=None):
+    """
+    Display AI Clinical Explanation section immediately below SHAP Feature Importance.
+    
+    Args:
+        prediction: Predicted class (0 or 1)
+        probability: Prediction probabilities array [prob_0, prob_1]
+        user_inputs: Dict of user inputs
+        importance_df: DataFrame of SHAP feature importances (optional)
+    """
+    st.markdown('<div class="sub-header">🤖 AI Clinical Explanation</div>', unsafe_allow_html=True)
+    
+    # 1. Prediction Summary
+    high_risk_prob = probability[1] if (probability is not None and len(probability) > 1) else 0.0
+    prob_pct = f"{high_risk_prob * 100:.1f}%"
+    
+    if high_risk_prob < 0.35:
+        risk_category = "Low Risk"
+        badge_style = "background-color: #2ecc71; color: white; padding: 4px 12px; border-radius: 5px; font-weight: bold;"
+    elif high_risk_prob <= 0.65:
+        risk_category = "Moderate Risk"
+        badge_style = "background-color: #f39c12; color: white; padding: 4px 12px; border-radius: 5px; font-weight: bold;"
+    else:
+        risk_category = "High Risk"
+        badge_style = "background-color: #e74c3c; color: white; padding: 4px 12px; border-radius: 5px; font-weight: bold;"
+
+    st.markdown(f"""<div class="info-box" style="padding: 1.25rem; margin-bottom: 1.5rem;">
+<h4 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.15rem; font-weight: bold; color: var(--text-color, #1a252f);">📋 Prediction Summary</h4>
+<p style="margin: 0; font-size: 1.05rem; line-height: 1.6;">
+Based on your clinical information, the AI model predicts a <span style="{badge_style}">{risk_category}</span> of Diabetic Nephropathy with a risk probability of <strong>{prob_pct}</strong>.
+</p>
+</div>""", unsafe_allow_html=True)
+
+    # 2. Personalized Health Recommendations (Replaces Why Did AI Make Prediction)
+    st.markdown("""<h4 style="font-weight: 600; color: var(--text-color, #1a252f); margin-top: 1.5rem; margin-bottom: 0.8rem;">💡 Personalized Health Recommendations</h4>""", unsafe_allow_html=True)
+    
+    st.markdown(f"""<p style="font-size: 1.02rem; margin-bottom: 1rem; color: var(--text-color, #1a252f);">
+<strong>Risk Status:</strong> <span style="{badge_style}">{risk_category}</span>
+</p>""", unsafe_allow_html=True)
+
+    # Generate dynamic patient-specific recommendations
+    dynamic_recs = generate_personalized_recommendations(user_inputs, importance_df, risk_category)
+    
+    if dynamic_recs:
+        for rec in dynamic_recs:
+            tag = rec['tag']
+            title = rec['title']
+            msg = rec['msg']
+            color = rec['color']
+            
+            st.markdown(f"""<div class="dashboard-card" style="margin-bottom: 1rem; padding: 1.1rem; border-left: 5px solid {color};">
+<h5 style="margin: 0 0 0.5rem 0; font-size: 1.05rem; font-weight: bold; color: var(--text-color, #1a252f);">{tag} — {title}</h5>
+<p style="margin: 0; font-size: 0.95rem; line-height: 1.6; color: var(--text-color, #2d3748);">{msg}</p>
+</div>""", unsafe_allow_html=True)
+    else:
+        # Patient with all normal indicators
+        st.markdown("""<div class="success-box" style="padding: 1.25rem; margin-bottom: 1rem;">
+<h5 style="margin: 0 0 0.5rem 0; font-weight: bold; color: #155724;">🟢 Positive Indicator — Clinical Status</h5>
+<p style="margin: 0; font-size: 1.02rem; line-height: 1.6; color: #155724;">Your current clinical indicators do not show major areas requiring additional attention based on the entered values. Continue regular diabetes monitoring and a healthy lifestyle.</p>
+</div>""", unsafe_allow_html=True)
+
+    # 3. Overall AI Assessment
+    st.markdown("""<h4 style="font-weight: 600; color: var(--text-color, #1a252f); margin-top: 2rem; margin-bottom: 1rem;">📊 Overall AI Assessment</h4>""", unsafe_allow_html=True)
+    
+    if risk_category == "High Risk":
+        assessment_text = f"Overall, the AI model predicts a <strong>High Risk</strong> of Diabetic Nephropathy with a probability of {prob_pct}. Key clinical factors require prompt medical attention and therapy optimization to mitigate kidney risk."
+    elif risk_category == "Moderate Risk":
+        assessment_text = f"Overall, the AI model predicts a <strong>Moderate Risk</strong> of Diabetic Nephropathy with a probability of {prob_pct}. Specific clinical parameters require targeted monitoring and lifestyle management to prevent risk progression."
+    else:
+        assessment_text = f"Overall, the AI model predicts a <strong>Low Risk</strong> of Diabetic Nephropathy with a risk probability of {prob_pct}. Most of the evaluated clinical indicators fall within acceptable ranges. Continuing regular monitoring and maintaining a healthy lifestyle may help reduce future risk."
+
+    st.markdown(f"""<div class="dashboard-card" style="padding: 1.25rem; background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.03));">
+<p style="margin: 0; font-size: 1.02rem; line-height: 1.6; color: var(--text-color, #1a252f);">{assessment_text}</p>
+</div>""", unsafe_allow_html=True)
+
+    # 4. Simple User-Friendly Explanation Note
+    st.markdown("""<div style="font-size: 0.9rem; color: var(--text-color, #7f8c8d); margin-top: 1rem; margin-bottom: 1.5rem; font-style: italic;">
+ℹ️ <strong>User-Friendly Guide:</strong> SHAP shows which clinical factors had the strongest influence on the AI model's prediction.
+</div>""", unsafe_allow_html=True)
+
+    # 5. Medical Disclaimer
+    st.markdown("""<div style="font-size: 0.88rem; color: #7f8c8d; border-top: 1px solid #cbd5e1; padding-top: 0.8rem; margin-top: 1.5rem; font-style: italic; text-align: center;">
+This AI explanation is generated using the model prediction and SHAP feature importance. It is intended for educational purposes only and should not replace professional medical advice.
+</div>""", unsafe_allow_html=True)
 
 
 def main():
@@ -1336,18 +2362,37 @@ def main():
         </div>
         <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
             <span style="color: var(--text-color); opacity: 0.8;">Training Set</span>
-            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('train_samples', 900)} samples</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
-            <span style="color: var(--text-color); opacity: 0.8;">Testing Set</span>
-            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('test_samples', 226)} samples</span>
-        </div>
         <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.88rem;">
             <span style="color: var(--text-color); opacity: 0.8;">Target Classes</span>
             <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('prediction_classes', 2)} classes</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
+
+    # Identify best model dynamically using priority: (1) Accuracy, (2) ROC-AUC, (3) F1
+    comparison_data = pipeline_data.get('comparison', {})
+    if comparison_data:
+        sorted_keys = sorted(
+            comparison_data.keys(),
+            key=lambda k: (
+                comparison_data[k].get('accuracy', 0.0),
+                comparison_data[k].get('roc_auc', 0.0),
+                comparison_data[k].get('f1', comparison_data[k].get('f1_score', 0.0))
+            ),
+            reverse=True
+        )
+        best_key = sorted_keys[0]
+        best_m = comparison_data[best_key]
+    else:
+        best_m = pipeline_data
+
+    best_model_name = best_m.get('model_name', pipeline_data.get('best_model', {}).get('name', 'Stacking Classifier'))
+    best_accuracy = best_m.get('accuracy', pipeline_data.get('accuracy', 0.8894))
+    best_cv_accuracy = best_m.get('cv_accuracy', pipeline_data.get('cv_accuracy', 0.9613))
+    best_precision = best_m.get('precision', pipeline_data.get('precision', 0.8894))
+    best_recall = best_m.get('recall', pipeline_data.get('recall', 0.8894))
+    best_f1 = best_m.get('f1', best_m.get('f1_score', pipeline_data.get('f1_score', 0.8894)))
+    best_roc_auc = best_m.get('roc_auc', pipeline_data.get('roc_auc', 0.9388))
 
     # Top performance metrics section
     st.markdown('<div class="sub-header">📈 Machine Learning Pipeline Metrics</div>', unsafe_allow_html=True)
@@ -1359,7 +2404,7 @@ def main():
         st.markdown(f"""
         <div class="perf-card border-accuracy">
             <div class="perf-label">🎯 Accuracy</div>
-            <div class="perf-value">{pipeline_data.get('accuracy', 0.8628):.2%}</div>
+            <div class="perf-value">{best_accuracy:.2%}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1367,7 +2412,7 @@ def main():
         st.markdown(f"""
         <div class="perf-card border-cv">
             <div class="perf-label">🔄 CV Accuracy</div>
-            <div class="perf-value">{pipeline_data.get('cv_accuracy', 0.8822):.2%}</div>
+            <div class="perf-value">{best_cv_accuracy:.2%}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1375,7 +2420,7 @@ def main():
         st.markdown(f"""
         <div class="perf-card border-precision">
             <div class="perf-label">📈 Precision</div>
-            <div class="perf-value">{pipeline_data.get('precision', 0.8663):.2%}</div>
+            <div class="perf-value">{best_precision:.2%}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1383,7 +2428,7 @@ def main():
         st.markdown(f"""
         <div class="perf-card border-recall">
             <div class="perf-label">📉 Recall</div>
-            <div class="perf-value">{pipeline_data.get('recall', 0.8628):.2%}</div>
+            <div class="perf-value">{best_recall:.2%}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1391,7 +2436,7 @@ def main():
         st.markdown(f"""
         <div class="perf-card border-f1">
             <div class="perf-label">🧬 F1 Score</div>
-            <div class="perf-value">{pipeline_data.get('f1_score', 0.8625):.2%}</div>
+            <div class="perf-value">{best_f1:.2%}</div>
         </div>
         """, unsafe_allow_html=True)
         
@@ -1399,54 +2444,9 @@ def main():
         st.markdown(f"""
         <div class="perf-card border-auc">
             <div class="perf-label">📊 ROC-AUC</div>
-            <div class="perf-value">{pipeline_data.get('roc_auc', 0.9323):.2%}</div>
+            <div class="perf-value">{best_roc_auc:.2%}</div>
         </div>
         """, unsafe_allow_html=True)
-    
-    # Load comparison data from pipeline_data (Model Comparison UI components removed)
-    comparison_data = pipeline_data.get('comparison', {
-        'XGBoost': {
-            'accuracy': pipeline_data.get('accuracy', 0.8628),
-            'precision': pipeline_data.get('precision', 0.8663),
-            'recall': pipeline_data.get('recall', 0.8628),
-            'f1': pipeline_data.get('f1_score', 0.8625),
-            'roc_auc': pipeline_data.get('roc_auc', 0.9323),
-            'model_name': 'XGBoost Classifier'
-        },
-        'Random Forest': {
-            'accuracy': 0.8584,
-            'precision': 0.8590,
-            'recall': 0.8584,
-            'f1': 0.8581,
-            'roc_auc': 0.9250,
-            'model_name': 'Random Forest Classifier'
-        },
-        'Support Vector Machine': {
-            'accuracy': 0.8407,
-            'precision': 0.8420,
-            'recall': 0.8407,
-            'f1': 0.8398,
-            'roc_auc': 0.9100,
-            'model_name': 'Support Vector Machine'
-        }
-    })
-    
-    # Identify best model dynamically using priority: (1) Accuracy, (2) ROC-AUC, (3) F1
-    sorted_keys = sorted(
-        comparison_data.keys(),
-        key=lambda k: (
-            comparison_data[k].get('accuracy', 0.0),
-            comparison_data[k].get('roc_auc', 0.0),
-            comparison_data[k].get('f1', comparison_data[k].get('f1_score', 0.0))
-        ),
-        reverse=True
-    )
-    best_key = sorted_keys[0]
-    best_m = comparison_data[best_key]
-    best_model_name = best_m.get('model_name', best_key)
-    best_accuracy = best_m.get('accuracy', 0.0)
-    best_roc_auc = best_m.get('roc_auc', 0.0)
-    best_f1 = best_m.get('f1', best_m.get('f1_score', 0.0))
     
     # Display best model & short conclusion
     st.markdown(f"""
@@ -1500,7 +2500,15 @@ def main():
                 
                 # Display SHAP explanation
                 st.markdown("---")
-                display_shap_explanation(model, input_df, feature_names)
+                importance_df = display_shap_explanation(model, input_df, feature_names)
+                
+                # Display Clinical Priority List (placed after SHAP Feature Importance and before AI Clinical Explanation)
+                st.markdown("---")
+                display_clinical_priority_list(user_inputs, importance_df)
+                
+                # Display AI Clinical Explanation
+                st.markdown("---")
+                display_ai_clinical_explanation(prediction, probability, user_inputs, importance_df)
             except ValueError as e:
                 st.error(f"Prediction Error: {e}")
                 st.info("Please ensure all required features are provided and match the model's expected input.")

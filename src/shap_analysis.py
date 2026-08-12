@@ -39,7 +39,11 @@ def initialize_shap_explainer(model, X_train):
     """
     Initialize SHAP explainer for the trained model.
     """
-    tree_model_names = {'XGBClassifier', 'RandomForestClassifier', 'ExtraTreesClassifier', 'LGBMClassifier'}
+    tree_model_names = {'XGBClassifier', 'RandomForestClassifier', 'ExtraTreesClassifier', 'LGBMClassifier',
+                        ########## NEW CATBOOST CODE ##########
+                        'CatBoostClassifier'
+                        ########## NEW CATBOOST CODE ##########
+                        }
     if model.__class__.__name__ in tree_model_names:
         logger.info("Initializing SHAP TreeExplainer...")
         explainer = shap.TreeExplainer(model)

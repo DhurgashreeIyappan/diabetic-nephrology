@@ -1,5 +1,5 @@
 {
-    "model_name": "Support Vector Machine",
+    "model_name": "LightGBM Classifier",
     "dataset_name": "Diabetic_Nephropathy_v1.xlsx",
     "dataset_size": 767,
     "num_features": 21,
@@ -8,15 +8,16 @@
     "prediction_classes": 2,
     "model_status": "Trained Successfully",
     "explainability": "SHAP Enabled",
-    "accuracy": 0.9336283185840708,
+    "accuracy": 0.8893805309734514,
     "cv_accuracy": 0.961283950617284,
-    "precision": 0.94140625,
-    "recall": 0.9336283185840708,
-    "f1_score": 0.9333346443531101,
-    "roc_auc": 0.9484297908998355,
+    "precision": 0.8894110275689223,
+    "recall": 0.8893805309734514,
+    "f1_score": 0.8893783651492904,
+    "roc_auc": 0.9455713055055212,
     "comparison": {
         "XGBoost": {
             "accuracy": 0.8849557522123894,
+            "cv_accuracy": 0.9518024691358026,
             "precision": 0.8868949232585597,
             "recall": 0.8849557522123894,
             "f1": 0.8848114169215088,
@@ -25,22 +26,16 @@
         },
         "Random Forest": {
             "accuracy": 0.8893805309734514,
+            "cv_accuracy": 0.9607901234567902,
             "precision": 0.8894110275689223,
             "recall": 0.8893805309734514,
             "f1": 0.8893783651492904,
             "roc_auc": 0.9349988252799749,
             "model_name": "Random Forest Classifier"
         },
-        "Support Vector Machine": {
-            "accuracy": 0.9336283185840708,
-            "precision": 0.94140625,
-            "recall": 0.9336283185840708,
-            "f1": 0.9333346443531101,
-            "roc_auc": 0.9484297908998355,
-            "model_name": "Support Vector Machine"
-        },
         "LightGBM": {
             "accuracy": 0.8893805309734514,
+            "cv_accuracy": 0.961283950617284,
             "precision": 0.8894110275689223,
             "recall": 0.8893805309734514,
             "f1": 0.8893783651492904,
@@ -49,26 +44,37 @@
         },
         "Extra Trees": {
             "accuracy": 0.8893805309734514,
+            "cv_accuracy": 0.9605925925925926,
             "precision": 0.8908805031446541,
             "recall": 0.8893805309734514,
             "f1": 0.8892743057596958,
             "roc_auc": 0.9398543347168924,
             "model_name": "Extra Trees Classifier"
         },
+        "CatBoost": {
+            "accuracy": 0.8938053097345132,
+            "cv_accuracy": 0.961037037037037,
+            "precision": 0.8939287113200157,
+            "recall": 0.8938053097345132,
+            "f1": 0.8937969924812031,
+            "roc_auc": 0.9328060145665285,
+            "model_name": "CatBoost Classifier"
+        },
         "Stacking Classifier": {
-            "accuracy": 0.9292035398230089,
-            "precision": 0.9358943768392588,
-            "recall": 0.9292035398230089,
-            "f1": 0.928930817610063,
-            "roc_auc": 0.9417338867569895,
+            "accuracy": 0.911504424778761,
+            "cv_accuracy": 0.911504424778761,
+            "precision": 0.9135773317591499,
+            "recall": 0.911504424778761,
+            "f1": 0.9113933976319297,
+            "roc_auc": 0.9387579293601692,
             "model_name": "Stacking Classifier"
         }
     },
     "best_model": {
-        "name": "Support Vector Machine",
-        "key": "Support Vector Machine",
-        "accuracy": 0.9336283185840708,
-        "roc_auc": 0.9484297908998355,
-        "f1_score": 0.9333346443531101
+        "name": "LightGBM Classifier",
+        "key": "LightGBM",
+        "accuracy": 0.8893805309734514,
+        "roc_auc": 0.9455713055055212,
+        "f1_score": 0.8893783651492904
     }
 }

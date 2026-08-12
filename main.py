@@ -35,7 +35,6 @@ from src import (
     preprocess_pipeline,
     train_xgboost_classifier,
     train_random_forest_classifier,
-    train_svm_classifier,
     train_lightgbm_classifier,
     train_extra_trees_classifier,
     tune_classifier,
@@ -45,7 +44,10 @@ from src import (
     evaluate_model,
     save_evaluation_report,
     run_shap_analysis,
-    save_shap_report
+    save_shap_report,
+    ########## NEW CATBOOST CODE ##########
+    train_catboost_classifier
+    ########## NEW CATBOOST CODE ##########
 )
 
 
@@ -108,42 +110,52 @@ def main():
     print(f"Scale pos weight: {scale_pos_weight:.2f}")
     
     # Step 3: tune every base model on the same already-preprocessed training set.
-    print("\n[Step 3/6] Tuning models with stratified 5-fold ROC-AUC...")
+    print("\n[Step 3/6] Tuning and training models with stratified 5-fold ROC-AUC...")
     from xgboost import XGBClassifier
     from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
-    from sklearn.svm import SVC
     from lightgbm import LGBMClassifier
+    from catboost import CatBoostClassifier
+
+    base_models = {
+        'XGBoost': (
+            XGBClassifier(objective='binary:logistic', eval_metric='logloss', random_state=42, n_jobs=1,
+                          scale_pos_weight=scale_pos_weight),
+            {'n_estimators': [200, 300, 500], 'max_depth': [3, 4, 6], 'learning_rate': [0.01, 0.03, 0.05],
+             'subsample': [0.7, 0.8, 0.9], 'colsample_bytree': [0.7, 0.8, 0.9], 'min_child_weight': [1, 3, 5]}
+        ),
+        'Random Forest': (
+            RandomForestClassifier(random_state=42, n_jobs=1),
+            {'n_estimators': [200, 300, 500], 'max_depth': [None, 5, 10, 20],
+             'min_samples_split': [2, 5, 10], 'min_samples_leaf': [1, 2, 4], 'max_features': ['sqrt', 'log2', None]}
+        ),
+        'LightGBM': (
+            LGBMClassifier(objective='binary', random_state=42, verbosity=-1, n_jobs=1),
+            {'n_estimators': [200, 300, 500], 'learning_rate': [0.01, 0.03, 0.05], 'num_leaves': [15, 31, 63],
+             'max_depth': [-1, 4, 6, 10], 'subsample': [0.7, 0.8, 0.9], 'colsample_bytree': [0.7, 0.8, 0.9]}
+        ),
+        'Extra Trees': (
+            ExtraTreesClassifier(random_state=42, n_jobs=1),
+            {'n_estimators': [200, 300, 500], 'max_depth': [None, 5, 10, 20],
+             'min_samples_split': [2, 5, 10], 'min_samples_leaf': [1, 2, 4], 'max_features': ['sqrt', 'log2', None]}
+        ),
+        'CatBoost': (
+            CatBoostClassifier(loss_function='Logloss', eval_metric='AUC', random_seed=42, verbose=False),
+            {'iterations': [200, 300, 500], 'depth': [4, 6, 8], 'learning_rate': [0.01, 0.03, 0.05]}
+        )
+    }
 
     tuned_models = {}
-    tuned_models['XGBoost'], xgb_search = tune_classifier(
-        XGBClassifier(objective='binary:logistic', eval_metric='logloss', random_state=42, n_jobs=1,
-                      scale_pos_weight=scale_pos_weight),
-        {'n_estimators': [200, 300, 500], 'max_depth': [3, 4, 6], 'learning_rate': [0.01, 0.03, 0.05],
-         'subsample': [0.7, 0.8, 0.9], 'colsample_bytree': [0.7, 0.8, 0.9], 'min_child_weight': [1, 3, 5]},
-        X_train, y_train)
-    tuned_models['Random Forest'], rf_search = tune_classifier(
-        RandomForestClassifier(random_state=42, n_jobs=1),
-        {'n_estimators': [200, 300, 500], 'max_depth': [None, 5, 10, 20],
-         'min_samples_split': [2, 5, 10], 'min_samples_leaf': [1, 2, 4], 'max_features': ['sqrt', 'log2', None]},
-        X_train, y_train)
-    tuned_models['Support Vector Machine'], svm_search = tune_classifier(
-        SVC(probability=True, random_state=42),
-        {'C': [0.1, 1, 10, 100], 'kernel': ['rbf', 'linear'], 'gamma': ['scale', 'auto', 0.01, 0.1]},
-        X_train, y_train)
-    tuned_models['LightGBM'], lgbm_search = tune_classifier(
-        LGBMClassifier(objective='binary', random_state=42, verbosity=-1, n_jobs=1),
-        {'n_estimators': [200, 300, 500], 'learning_rate': [0.01, 0.03, 0.05], 'num_leaves': [15, 31, 63],
-         'max_depth': [-1, 4, 6, 10], 'subsample': [0.7, 0.8, 0.9], 'colsample_bytree': [0.7, 0.8, 0.9]},
-        X_train, y_train)
-    tuned_models['Extra Trees'], et_search = tune_classifier(
-        ExtraTreesClassifier(random_state=42, n_jobs=1),
-        {'n_estimators': [200, 300, 500], 'max_depth': [None, 5, 10, 20],
-         'min_samples_split': [2, 5, 10], 'min_samples_leaf': [1, 2, 4], 'max_features': ['sqrt', 'log2', None]},
-        X_train, y_train)
+    model_searches = {}
+
+    for name, (estimator, grid) in base_models.items():
+        model, search = tune_classifier(estimator, grid, X_train, y_train)
+        tuned_models[name] = model
+        model_searches[name] = search
 
     # The final proposed model uses all tuned base estimators and Logistic Regression.
+    logging.info("Building and fitting Stacking Classifier ensemble...")
     stacking_model = build_stacking_classifier(
-        tuned_models['XGBoost'], tuned_models['Random Forest'], tuned_models['Support Vector Machine'],
+        tuned_models['XGBoost'], tuned_models['Random Forest'],
         tuned_models['LightGBM'], tuned_models['Extra Trees'])
     stacking_model.fit(X_train, y_train)
     tuned_models['Stacking Classifier'] = stacking_model
@@ -155,17 +167,25 @@ def main():
         evaluation_by_model[name] = evaluate_model(candidate, X_test, y_test, PLOTS_DIR, name)
 
     model_display_names = {
-        'XGBoost': 'XGBoost Classifier', 'Random Forest': 'Random Forest Classifier',
-        'Support Vector Machine': 'Support Vector Machine', 'LightGBM': 'LightGBM Classifier',
-        'Extra Trees': 'Extra Trees Classifier', 'Stacking Classifier': 'Stacking Classifier'
+        'XGBoost': 'XGBoost Classifier',
+        'Random Forest': 'Random Forest Classifier',
+        'LightGBM': 'LightGBM Classifier',
+        'Extra Trees': 'Extra Trees Classifier',
+        'CatBoost': 'CatBoost Classifier',
+        'Stacking Classifier': 'Stacking Classifier'
     }
-    models_metrics = {
-        name: {
-            'accuracy': float(result['metrics']['accuracy']), 'precision': float(result['metrics']['precision']),
-            'recall': float(result['metrics']['recall']), 'f1': float(result['metrics']['f1_score']),
-            'roc_auc': float(result['metrics']['roc_auc'] or 0.0), 'model_name': model_display_names[name]
-        } for name, result in evaluation_by_model.items()
-    }
+    models_metrics = {}
+    for name, result in evaluation_by_model.items():
+        cv_score = float(model_searches[name].best_score_) if name in model_searches else float(result['metrics']['accuracy'])
+        models_metrics[name] = {
+            'accuracy': float(result['metrics']['accuracy']),
+            'cv_accuracy': cv_score,
+            'precision': float(result['metrics']['precision']),
+            'recall': float(result['metrics']['recall']),
+            'f1': float(result['metrics']['f1_score']),
+            'roc_auc': float(result['metrics']['roc_auc'] or 0.0),
+            'model_name': model_display_names[name]
+        }
 
     # ROC-AUC alone determines the final deployed model.
     best_model_key = max(models_metrics, key=lambda name: models_metrics[name]['roc_auc'])
@@ -174,7 +194,7 @@ def main():
     final_model_path = save_model(best_model_obj, MODELS_DIR, 'final_prediction_model.joblib')
 
     # Professional console table and the required publication-ready reports.
-    model_order = ['XGBoost', 'Random Forest', 'Support Vector Machine', 'LightGBM', 'Extra Trees', 'Stacking Classifier']
+    model_order = ['XGBoost', 'Random Forest', 'LightGBM', 'Extra Trees', 'CatBoost', 'Stacking Classifier']
     table_border = '-' * 63
     table_lines = [
         table_border,
@@ -243,6 +263,7 @@ def main():
     metadata_path = Path(REPORTS_DIR) / 'pipeline_metadata.json'
     print(f"\nSaving pipeline metadata and metrics to {metadata_path}...")
     import json
+    best_cv = float(model_searches[best_model_key].best_score_) if best_model_key in model_searches else float(best_model_metrics['accuracy'])
     metadata = {
         'model_name': best_model_metrics['model_name'],
         'dataset_name': Path(DATASET_PATH).name,
@@ -254,7 +275,7 @@ def main():
         'model_status': 'Trained Successfully',
         'explainability': 'SHAP Enabled',
         'accuracy': float(best_model_metrics['accuracy']),
-        'cv_accuracy': float(max(search.best_score_ for search in [xgb_search, rf_search, svm_search, lgbm_search, et_search])),
+        'cv_accuracy': best_cv,
         'precision': float(best_model_metrics['precision']),
         'recall': float(best_model_metrics['recall']),
         'f1_score': float(best_model_metrics['f1']),

@@ -15,6 +15,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import RandomizedSearchCV, StratifiedKFold
 from sklearn.svm import SVC
 from lightgbm import LGBMClassifier
+########## NEW CATBOOST CODE ##########
+from catboost import CatBoostClassifier
+########## NEW CATBOOST CODE ##########
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -238,6 +241,27 @@ def train_extra_trees_classifier(X_train, y_train, params: Optional[Dict[str, An
     return model
 
 
+########## NEW CATBOOST CODE ##########
+def train_catboost_classifier(X_train, y_train, params=None, random_state: int = 42) -> CatBoostClassifier:
+    """Train a CatBoost Classifier using the already prepared feature data."""
+    default_params = {
+        'iterations': 300,
+        'depth': 6,
+        'learning_rate': 0.05,
+        'loss_function': 'Logloss',
+        'eval_metric': 'AUC',
+        'random_seed': random_state,
+        'verbose': False
+    }
+    if params:
+        default_params.update(params)
+    model = CatBoostClassifier(**default_params)
+    model.fit(X_train, y_train)
+    logger.info("CatBoost Classifier trained successfully")
+    return model
+########## NEW CATBOOST CODE ##########
+
+
 def tune_classifier(estimator, param_distributions: Dict[str, Any], X_train, y_train,
                     random_state: int = 42, n_iter: int = 10):
     """Tune a classifier with stratified five-fold ROC-AUC optimisation.
@@ -262,14 +286,13 @@ def tune_classifier(estimator, param_distributions: Dict[str, Any], X_train, y_t
     return search.best_estimator_, search
 
 
-def build_stacking_classifier(xgb_model, rf_model, svm_model, lightgbm_model, extra_trees_model,
+def build_stacking_classifier(xgb_model, rf_model, lightgbm_model, extra_trees_model,
                               random_state: int = 42) -> StackingClassifier:
     """Fit the proposed ensemble with Logistic Regression as its meta-learner."""
     return StackingClassifier(
         estimators=[
             ('xgboost', xgb_model),
             ('random_forest', rf_model),
-            ('svm', svm_model),
             ('lightgbm', lightgbm_model),
             ('extra_trees', extra_trees_model),
         ],

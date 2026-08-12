@@ -4,7 +4,7 @@ SHAP ANALYSIS REPORT
 
 EXPLAINER TYPE:
 ------------------------------------------------------------
-PermutationExplainer
+TreeExplainer
 
 SHAP VALUES SHAPE:
 ------------------------------------------------------------
@@ -20,35 +20,35 @@ Force Plot: outputs\plots\shap_force_plot.png
 DEPENDENCE PLOTS:
 ------------------------------------------------------------
 SBP (mmHg) : outputs\plots\shap_dependence_SBP (mmHg) .png
-Weight(kg): outputs\plots\shap_dependence_Weight(kg).png
-Age: outputs\plots\shap_dependence_Age.png
+Diabetic retinopathy (DR): outputs\plots\shap_dependence_Diabetic retinopathy (DR).png
+HbA1c (%): outputs\plots\shap_dependence_HbA1c (%).png
 
 ============================================================
 PATIENT EXPLANATION
 ============================================================
 
-Prediction: 0.1012
-Base Value: 0.5000
+Prediction: -7.5381
+Base Value: -0.2208
 
 TOP FEATURE CONTRIBUTIONS:
 ------------------------------------------------------------
-SBP (mmHg) : -0.0760 (Decreases)
-  Feature Value: 129.0000
-DBP (mmHg): -0.0759 (Decreases)
-  Feature Value: 94.0000
-Diabetes duration (y): -0.0508 (Decreases)
-  Feature Value: 4.0000
-Height(cm): -0.0375 (Decreases)
-  Feature Value: 165.0000
-Age: -0.0358 (Decreases)
-  Feature Value: 43.0000
-FBG (mmol/L): -0.0328 (Decreases)
-  Feature Value: 10.1800
-Weight(kg): -0.0289 (Decreases)
-  Feature Value: 63.0000
-BMI (kg/m2): -0.0277 (Decreases)
+BMI (kg/m2): -2.2468 (Decreases)
   Feature Value: 23.1405
-HbA1c (%): -0.0146 (Decreases)
+SBP (mmHg) : -1.7676 (Decreases)
+  Feature Value: 129.0000
+LDLC（mmoll）: 1.6930 (Increases)
+  Feature Value: 3.9500
+FBG (mmol/L): -1.3263 (Decreases)
+  Feature Value: 10.1800
+HDLC（mmoll）: -1.0205 (Decreases)
+  Feature Value: 1.1400
+Height(cm): 0.8668 (Increases)
+  Feature Value: 165.0000
+TC（mmoll）: -0.8650 (Decreases)
+  Feature Value: 5.5400
+Diabetic retinopathy (DR): -0.7051 (Decreases)
+  Feature Value: 0.0000
+HbA1c (%): -0.6121 (Decreases)
   Feature Value: 8.4000
-TG（mmoll）: -0.0059 (Decreases)
-  Feature Value: 1.2100
+Metformin: -0.5615 (Decreases)
+  Feature Value: 1.0000

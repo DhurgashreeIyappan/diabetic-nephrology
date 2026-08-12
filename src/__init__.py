@@ -17,14 +17,16 @@ from .preprocessing import (
 from .model import (
     train_xgboost_classifier,
     train_random_forest_classifier,
-    train_svm_classifier,
     train_lightgbm_classifier,
     train_extra_trees_classifier,
     tune_classifier,
     build_stacking_classifier,
     save_model,
     load_model,
-    get_model_feature_importance
+    get_model_feature_importance,
+    ########## NEW CATBOOST CODE ##########
+    train_catboost_classifier
+    ########## NEW CATBOOST CODE ##########
 )
 from .evaluation import (
     calculate_metrics,
@@ -62,7 +64,6 @@ __all__ = [
     'apply_feature_scaling',
     'train_xgboost_classifier',
     'train_random_forest_classifier',
-    'train_svm_classifier',
     'train_lightgbm_classifier',
     'train_extra_trees_classifier',
     'tune_classifier',
@@ -70,6 +71,9 @@ __all__ = [
     'save_model',
     'load_model',
     'get_model_feature_importance',
+    ########## NEW CATBOOST CODE ##########
+    'train_catboost_classifier',
+    ########## NEW CATBOOST CODE ##########
     'calculate_metrics',
     'print_classification_report',
     'print_metrics',

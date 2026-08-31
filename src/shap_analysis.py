@@ -9,6 +9,7 @@ import shap
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import re
 from pathlib import Path
 from typing import Optional, Dict, Any
 import logging
@@ -119,11 +120,12 @@ def plot_shap_summary(
               fontsize=16, fontweight='bold', pad=20)
     plt.tight_layout()
     
-    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_path_obj = Path(save_path).resolve()
+    save_path_obj.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path_obj), dpi=300, bbox_inches='tight')
     plt.close()
     
-    logger.info(f"SHAP summary plot saved to: {save_path}")
+    logger.info(f"SHAP summary plot saved to: {save_path_obj}")
 
 
 def plot_global_feature_importance(
@@ -157,11 +159,12 @@ def plot_global_feature_importance(
     plt.grid(axis='x', alpha=0.3)
     plt.tight_layout()
     
-    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_path_obj = Path(save_path).resolve()
+    save_path_obj.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path_obj), dpi=300, bbox_inches='tight')
     plt.close()
     
-    logger.info(f"Global feature importance plot saved to: {save_path}")
+    logger.info(f"Global feature importance plot saved to: {save_path_obj}")
 
 
 def plot_waterfall(
@@ -196,11 +199,12 @@ def plot_waterfall(
               fontsize=16, fontweight='bold', pad=20)
     plt.tight_layout()
     
-    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_path_obj = Path(save_path).resolve()
+    save_path_obj.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path_obj), dpi=300, bbox_inches='tight')
     plt.close()
     
-    logger.info(f"Waterfall plot saved to: {save_path}")
+    logger.info(f"Waterfall plot saved to: {save_path_obj}")
 
 
 def plot_force(
@@ -230,11 +234,12 @@ def plot_force(
               fontsize=16, fontweight='bold', pad=20)
     plt.tight_layout()
     
-    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_path_obj = Path(save_path).resolve()
+    save_path_obj.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path_obj), dpi=300, bbox_inches='tight')
     plt.close()
     
-    logger.info(f"Force plot saved to: {save_path}")
+    logger.info(f"Force plot saved to: {save_path_obj}")
 
 
 def plot_dependence(
@@ -263,11 +268,12 @@ def plot_dependence(
               fontsize=16, fontweight='bold', pad=20)
     plt.tight_layout()
     
-    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_path_obj = Path(save_path).resolve()
+    save_path_obj.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path_obj), dpi=300, bbox_inches='tight')
     plt.close()
     
-    logger.info(f"Dependence plot saved to: {save_path}")
+    logger.info(f"Dependence plot saved to: {save_path_obj}")
 
 
 def explain_individual_prediction(
@@ -361,7 +367,8 @@ def run_shap_analysis(
     
     results['dependence_plots'] = {}
     for idx, feature in enumerate(top_features):
-        dep_path = Path(plots_dir) / f'shap_dependence_{feature}.png'
+        safe_feature = re.sub(r'[\\/:*?"<>|\s]+', '_', str(feature)).strip('_')
+        dep_path = Path(plots_dir) / f'shap_dependence_{safe_feature}.png'
         plot_dependence(shap_values, X_test, feature, str(dep_path))
         results['dependence_plots'][feature] = str(dep_path)
     

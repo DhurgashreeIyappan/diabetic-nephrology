@@ -19,9 +19,9 @@ Force Plot: outputs\plots\shap_force_plot.png
 
 DEPENDENCE PLOTS:
 ------------------------------------------------------------
-SBP (mmHg) : outputs\plots\shap_dependence_SBP (mmHg) .png
-Diabetic retinopathy (DR): outputs\plots\shap_dependence_Diabetic retinopathy (DR).png
-HbA1c (%): outputs\plots\shap_dependence_HbA1c (%).png
+SBP (mmHg) : outputs\plots\shap_dependence_SBP_(mmHg).png
+Diabetic retinopathy (DR): outputs\plots\shap_dependence_Diabetic_retinopathy_(DR).png
+HbA1c (%): outputs\plots\shap_dependence_HbA1c_(%).png
 
 ============================================================
 PATIENT EXPLANATION

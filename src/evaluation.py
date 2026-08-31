@@ -157,11 +157,12 @@ def plot_confusion_matrix(
     plt.tight_layout()
     
     # Save plot
-    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_path_obj = Path(save_path).resolve()
+    save_path_obj.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path_obj), dpi=300, bbox_inches='tight')
     plt.close()
     
-    logger.info(f"Confusion matrix saved to: {save_path}")
+    logger.info(f"Confusion matrix saved to: {save_path_obj}")
 
 
 def plot_roc_curve(
@@ -202,11 +203,12 @@ def plot_roc_curve(
     plt.tight_layout()
     
     # Save plot
-    Path(save_path).parent.mkdir(parents=True, exist_ok=True)
-    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    save_path_obj = Path(save_path).resolve()
+    save_path_obj.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(str(save_path_obj), dpi=300, bbox_inches='tight')
     plt.close()
     
-    logger.info(f"ROC curve saved to: {save_path}")
+    logger.info(f"ROC curve saved to: {save_path_obj}")
 
 
 def evaluate_model(

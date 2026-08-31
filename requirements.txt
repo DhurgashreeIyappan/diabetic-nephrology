@@ -7,9 +7,11 @@ openpyxl
 scikit-learn
 xgboost
 lightgbm
+imbalanced-learn
 ########## NEW CATBOOST CODE ##########
 catboost
 ########## NEW CATBOOST CODE ##########
+
 
 # Explainable AI
 shap

@@ -19,6 +19,7 @@ from pathlib import Path
 import sys
 import logging
 import warnings
+import base64
 
 # Reconfigure stdout/stderr to replace encoding errors on Windows console
 if hasattr(sys.stdout, 'reconfigure'):
@@ -38,6 +39,27 @@ sys.path.append(str(Path(__file__).parent / 'src'))
 from src import load_model
 
 
+
+def get_asset_as_base64(filename):
+    """Convert image file in assets folder to base64 string for background CSS."""
+    path = Path("assets") / filename
+    if path.exists():
+        with open(path, "rb") as img_file:
+            encoded_string = base64.b64encode(img_file.read()).decode()
+            ext = path.suffix.lower().replace('.', '')
+            if ext == 'jpg': ext = 'jpeg'
+            return f"data:image/{ext};base64,{encoded_string}"
+    return ""
+
+# Load 6 existing project background images from assets directory
+img_hero = get_asset_as_base64("medical_ai_bg.jpg")
+img_ml = get_asset_as_base64("1776432546955.webp")
+img_input = get_asset_as_base64("Services_DiabeteNephropathy.jpeg")
+img_pred = get_asset_as_base64("Diabetic-Kidney-Disease-.jpg")
+img_shap = get_asset_as_base64("61280878_612758185895640_7741114316891357184_o.jpg")
+img_recs = get_asset_as_base64("Kidney-Health-Guide-Effective-Tips-To-Keep-Kidney-Healthy.jpg")
+
+
 # Page configuration
 st.set_page_config(
     page_title="Diabetic Nephropathy Prediction",
@@ -49,223 +71,319 @@ st.set_page_config(
 # Custom CSS for clean UI and high text readability
 st.markdown("""
 <style>
-    /* Header styling with automatic contrast adjustment based on theme text color */
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+    html, body, [data-testid="stAppViewContainer"], .stApp {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
+    }
+
+    /* FULL-PAGE SCROLLING BACKGROUND DESIGN USING ALL 6 EXISTING PROJECT IMAGES */
+    [data-testid="stAppViewContainer"], .stApp {
+        background-image: 
+            linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.94) 0%,
+                rgba(248, 250, 252, 0.92) 12%,
+                rgba(255, 255, 255, 0.93) 28%,
+                rgba(248, 250, 252, 0.92) 48%,
+                rgba(255, 255, 255, 0.93) 68%,
+                rgba(248, 250, 252, 0.92) 84%,
+                rgba(255, 255, 255, 0.95) 100%
+            ),
+            url(""" + f'"{img_hero}"' + """),
+            url(""" + f'"{img_ml}"' + """),
+            url(""" + f'"{img_input}"' + """),
+            url(""" + f'"{img_pred}"' + """),
+            url(""" + f'"{img_shap}"' + """),
+            url(""" + f'"{img_recs}"' + """) !important;
+
+        background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat, no-repeat !important;
+        background-position: 
+            center top,
+            center 1.5%,
+            center 18%,
+            center 36%,
+            center 55%,
+            center 75%,
+            center 94% !important;
+
+        background-size: 
+            100% 100%,
+            100% 750px,
+            100% 800px,
+            100% 850px,
+            100% 900px,
+            100% 950px,
+            100% 850px !important;
+
+        background-attachment: scroll !important;
+    }
+
+    /* Streamlit Header & Sidebar Styling */
+    [data-testid="stHeader"] {
+        background: transparent !important;
+    }
+    
+    [data-testid="stSidebar"] {
+        background-color: #ffffff !important;
+        backdrop-filter: blur(16px) !important;
+        border-right: 1px solid #e2e8f0 !important;
+        box-shadow: 2px 0 10px rgba(0, 0, 0, 0.03) !important;
+    }
+
+    [data-testid="stSidebar"] * {
+        color: #0f172a !important;
+    }
+
+    [data-testid="stSidebar"] h3, [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h1 {
+        color: #0284c7 !important;
+    }
+
+    /* Main Container Padding */
+    .main .block-container {
+        max-width: 1200px !important;
+        padding-top: 1.5rem !important;
+        padding-bottom: 4rem !important;
+    }
+
+    /* Header styling with gradient accent */
     .main-header {
-        font-size: 2.5rem;
-        font-weight: bold;
-        color: var(--text-color, #1a252f) !important;
-        text-align: center;
-        padding: 2rem 0;
+        font-size: 2.8rem !important;
+        font-weight: 800 !important;
+        background: linear-gradient(135deg, #0f172a 0%, #0284c7 60%, #0369a1 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        text-align: center !important;
+        padding: 1.5rem 0 0.5rem 0 !important;
+        letter-spacing: -0.02em !important;
+        filter: drop-shadow(0 2px 8px rgba(2, 132, 199, 0.15));
     }
+
     .sub-header {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--text-color, #2c3e50) !important;
-        padding: 1rem 0;
-    }
-    
-    /* Box styles with explicit high-contrast text colors on light background boxes */
-    .success-box {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        border-radius: 5px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    .success-box, 
-    .success-box h1, .success-box h2, .success-box h3, .success-box h4, .success-box h5, .success-box h6,
-    .success-box p, .success-box span, .success-box li, .success-box strong {
-        color: #155724 !important;
-    }
-    
-    .warning-box {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-radius: 5px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    .warning-box, 
-    .warning-box h1, .warning-box h2, .warning-box h3, .warning-box h4, .warning-box h5, .warning-box h6,
-    .warning-box p, .warning-box span, .warning-box li, .warning-box strong {
-        color: #856404 !important;
-    }
-    
-    .info-box {
-        background-color: #d1ecf1;
-        border: 1px solid #bee5eb;
-        border-radius: 5px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    .info-box, 
-    .info-box h1, .info-box h2, .info-box h3, .info-box h4, .info-box h5, .info-box h6,
-    .info-box p, .info-box span, .info-box li, .info-box strong {
-        color: #0c5460 !important;
+        font-size: 1.6rem !important;
+        font-weight: 700 !important;
+        color: #0284c7 !important;
+        padding: 1rem 0 !important;
+        letter-spacing: -0.01em !important;
     }
 
-    /* General label readability and contrast */
-    label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] span {
-        color: var(--text-color, #1a252f) !important;
-        font-weight: 500 !important;
-    }
-    
-    /* Input field readability and contrast */
-    .stNumberInput input, .stTextInput input, input {
-        color: var(--text-color, #1a252f) !important;
-    }
-    
-    /* Selectbox list items/options contrast */
-    div[data-baseweb="select"] *, div[role="listbox"] *, .stSelectbox * {
-        color: var(--text-color, #1a252f);
-    }
-    
-    /* Table / dataframe text and headers contrast */
-    table, th, td, tr, [data-testid="stTable"] * {
-        color: var(--text-color, #1a252f) !important;
-    }
-    [data-testid="stDataFrame"] * {
-        color: var(--text-color, #1a252f) !important;
-    }
-    
-    /* Markdown text contrast outside of custom alert boxes */
-    div[data-testid="stMarkdownContainer"] p, 
-    div[data-testid="stMarkdownContainer"] li,
-    div[data-testid="stMarkdownContainer"] ul,
-    div[data-testid="stMarkdownContainer"] ol,
-    div[data-testid="stMarkdownContainer"] span,
-    div[data-testid="stMarkdownContainer"] strong {
-        color: var(--text-color, #1a252f);
-    }
-    
-    /* Explicit exclusion to ensure custom boxes text color isn't overridden by markdown styles */
-    .success-box p, .success-box span, .success-box li, .success-box strong,
-    .warning-box p, .warning-box span, .warning-box li, .warning-box strong,
-    .info-box p, .info-box span, .info-box li, .info-box strong {
-        color: inherit !important;
-    }
-    
-    /* Native notification message readability */
-    [data-testid="stNotification"] p, [data-testid="stNotification"] span, [data-testid="stNotification"] * {
-        color: var(--text-color, #1a252f) !important;
-    }
-
-    /* Footer visibility */
-    .footer-container {
-        text-align: center;
-        color: var(--text-color, #7f8c8d) !important;
-        opacity: 0.85;
-        padding: 2rem 0;
-    }
-    .footer-container p {
-        color: var(--text-color, #7f8c8d) !important;
-    }
-
-    /* Dashboard card styling */
+    /* Clean Professional Medical Card Styling */
     .dashboard-card {
-        background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.05));
-        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-        border-radius: 10px;
-        padding: 1.5rem;
-        margin: 1rem 0;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 16px !important;
+        padding: 1.5rem !important;
+        margin: 1.25rem 0 !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
+        color: #0f172a !important;
     }
-    .dashboard-card h3, .dashboard-card h4 {
+
+    .dashboard-card h3, .dashboard-card h4, .dashboard-card h5 {
         margin-top: 0 !important;
         font-weight: 700 !important;
-        color: var(--text-color, #1a252f) !important;
-    }
-    
-    /* Badges */
-    .badge {
-        display: inline-block;
-        padding: 0.35em 0.65em;
-        font-size: 0.9em;
-        font-weight: 700;
-        line-height: 1;
-        text-align: center;
-        white-space: nowrap;
-        vertical-align: baseline;
-        border-radius: 0.25rem;
-        margin-left: 0.5rem;
-    }
-    .badge-low {
-        background-color: #2ecc71 !important;
-        color: #ffffff !important;
-    }
-    .badge-mod {
-        background-color: #f39c12 !important;
-        color: #ffffff !important;
-    }
-    .badge-high {
-        background-color: #e74c3c !important;
-        color: #ffffff !important;
+        color: #0f172a !important;
     }
 
-    /* Danger alert box for high-risk warnings */
-    .danger-box {
-        background-color: #f8d7da;
-        border: 1px solid #f5c6cb;
-        border-radius: 5px;
-        padding: 1rem;
-        margin: 1rem 0;
-    }
-    .danger-box, 
-    .danger-box h1, .danger-box h2, .danger-box h3, .danger-box h4, .danger-box h5, .danger-box h6,
-    .danger-box p, .danger-box span, .danger-box li, .danger-box strong {
-        color: #721c24 !important;
-    }
-
-    /* Clean white background container with light border and rounded corners for the probability chart */
-    .probability-chart-container [data-testid="stPlotlyChart"] {
+    /* Patient Info Input Form Card */
+    .patient-info-card {
+        background: #ffffff !important;
         border: 1px solid #cbd5e1 !important;
-        border-radius: 12px !important;
-        background-color: #ffffff !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
-        padding: 1.25rem !important;
+        border-radius: 16px !important;
+        padding: 2rem !important;
+        margin: 1.5rem 0 !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04) !important;
     }
 
-    /* Clean white background container with light border and rounded corners for the SHAP chart */
-    .shap-chart-container [data-testid="stPlotlyChart"] {
+    .patient-info-card label, 
+    .patient-info-card [data-testid="stWidgetLabel"] p, 
+    .patient-info-card [data-testid="stWidgetLabel"] span {
+        color: #1e293b !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+    }
+
+    .patient-info-card input, 
+    .patient-info-card select, 
+    .patient-info-card div[role="combobox"] {
+        height: 42px !important;
+        border-radius: 8px !important;
         border: 1px solid #cbd5e1 !important;
-        border-radius: 12px !important;
-        background-color: #ffffff !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
-        padding: 1.25rem !important;
-    }
-
-    /* SHAP Summary Card Styling */
-    .shap-summary-card {
-        border-left: 5px solid #3b82f6 !important;
         background-color: #f8fafc !important;
-        border-top: 1px solid #cbd5e1 !important;
-        border-right: 1px solid #cbd5e1 !important;
-        border-bottom: 1px solid #cbd5e1 !important;
-        border-radius: 4px 8px 8px 4px !important;
+        color: #0f172a !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .patient-info-card input:focus, 
+    .patient-info-card select:focus, 
+    .patient-info-card div[role="combobox"]:focus-within {
+        border-color: #0284c7 !important;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+        outline: none !important;
+    }
+
+    .patient-info-card .sub-header {
+        font-size: 1.6rem !important;
+        font-weight: 700 !important;
+        color: #0284c7 !important;
+        margin-top: 0 !important;
+        margin-bottom: 1.5rem !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding-bottom: 0.75rem !important;
+    }
+
+    /* Widget Labels & General Text Contrast */
+    label, [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] span {
+        color: #1e293b !important;
+        font-weight: 600 !important;
+    }
+
+    .stNumberInput input, .stTextInput input, input {
+        color: #0f172a !important;
+        background-color: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+    }
+
+    div[data-baseweb="select"] *, div[role="listbox"] *, .stSelectbox * {
+        color: #0f172a !important;
+    }
+
+    /* Button Styling */
+    div.stButton > button {
+        background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        font-size: 1.15rem !important;
+        padding: 0.75rem 2rem !important;
+        border-radius: 12px !important;
+        border: none !important;
+        box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3) !important;
+        transition: all 0.2s ease !important;
+    }
+
+    div.stButton > button:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 25px rgba(2, 132, 199, 0.45) !important;
+    }
+
+    /* Performance Metric Cards Styling */
+    .perf-card {
+        background: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        padding: 1.25rem !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+        text-align: center !important;
+        margin-bottom: 1rem !important;
+    }
+
+    .perf-card:hover {
+        transform: translateY(-3px) !important;
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    .border-accuracy { border-left: 5px solid #0284c7 !important; }
+    .border-cv { border-left: 5px solid #2563eb !important; }
+    .border-precision { border-left: 5px solid #7c3aed !important; }
+    .border-recall { border-left: 5px solid #ea580c !important; }
+    .border-f1 { border-left: 5px solid #4f46e5 !important; }
+    .border-auc { border-left: 5px solid #e11d48 !important; }
+
+    .perf-label {
+        font-size: 0.85rem !important;
+        font-weight: 600 !important;
+        color: #64748b !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.05em !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .perf-value {
+        font-size: 1.8rem !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        margin: 0 !important;
+    }
+
+    /* Box styles with explicit high-contrast text colors */
+    .success-box {
+        background-color: #f0fdf4 !important;
+        border: 1px solid #bbf7d0 !important;
+        border-radius: 10px !important;
+        padding: 1.2rem !important;
+        margin: 1rem 0 !important;
+    }
+    .success-box, .success-box * {
+        color: #166534 !important;
+    }
+
+    .warning-box {
+        background-color: #fffbeb !important;
+        border: 1px solid #fef08a !important;
+        border-radius: 10px !important;
+        padding: 1.2rem !important;
+        margin: 1rem 0 !important;
+    }
+    .warning-box, .warning-box * {
+        color: #854d0e !important;
+    }
+
+    .info-box {
+        background-color: #f0f9ff !important;
+        border: 1px solid #bae6fd !important;
+        border-radius: 10px !important;
+        padding: 1.2rem !important;
+        margin: 1rem 0 !important;
+    }
+    .info-box, .info-box * {
+        color: #075985 !important;
+    }
+
+    .danger-box {
+        background-color: #fef2f2 !important;
+        border: 1px solid #fecaca !important;
+        border-radius: 10px !important;
+        padding: 1.2rem !important;
+        margin: 1rem 0 !important;
+    }
+    .danger-box, .danger-box * {
+        color: #991b1b !important;
+    }
+
+    /* Clean white background containers for Plotly charts and SHAP tables */
+    .probability-chart-container [data-testid="stPlotlyChart"],
+    .shap-chart-container [data-testid="stPlotlyChart"] {
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 14px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04) !important;
+        padding: 1.25rem !important;
+    }
+
+    .shap-summary-card {
+        border-left: 5px solid #0284c7 !important;
+        background: #ffffff !important;
+        border-top: 1px solid #e2e8f0 !important;
+        border-right: 1px solid #e2e8f0 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        border-radius: 8px 14px 14px 8px !important;
         padding: 1.5rem !important;
         margin: 1.5rem 0 !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04) !important;
     }
     .shap-summary-card h4 {
         margin: 0 0 1rem 0 !important;
         font-weight: bold !important;
         color: #0f172a !important;
     }
-    .shap-summary-list {
-        list-style-type: none !important;
-        padding-left: 0 !important;
-        margin-bottom: 0 !important;
-    }
     .shap-summary-list li {
         display: flex !important;
         justify-content: space-between !important;
         padding: 0.6rem 0 !important;
-        border-bottom: 1px dashed #cbd5e1 !important;
-        color: #1e293b !important;
-    }
-    .shap-summary-list li:last-child {
-        border-bottom: none !important;
-        padding-bottom: 0 !important;
+        border-bottom: 1px dashed #e2e8f0 !important;
+        color: #0f172a !important;
     }
     .shap-summary-label {
         font-weight: bold !important;
@@ -273,15 +391,14 @@ st.markdown("""
     }
     .shap-summary-value {
         font-weight: bold !important;
-        color: #0f172a !important;
+        color: #0284c7 !important;
     }
 
-    /* Detailed Feature Contributions HTML Table Styling */
     .shap-table-container {
-        border-radius: 12px !important;
+        border-radius: 14px !important;
         overflow: hidden !important;
         border: 1px solid #cbd5e1 !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04) !important;
         margin: 1.5rem 0 !important;
         background-color: #ffffff !important;
         padding: 0 !important;
@@ -298,136 +415,22 @@ st.markdown("""
         font-weight: bold !important;
         padding: 12px 18px !important;
         border-bottom: 2px solid #cbd5e1 !important;
-        font-size: 0.95rem !important;
     }
     .shap-html-table td {
         padding: 12px 18px !important;
-        border-bottom: 1px solid #cbd5e1 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
         color: #334155 !important;
-        font-size: 0.92rem !important;
-    }
-    .shap-html-table tr:last-child td {
-        border-bottom: none !important;
-    }
-    /* Zebra Striping */
-    .shap-html-table tr:nth-child(even) {
-        background-color: #f8fafc !important;
-    }
-    .shap-html-table tr:nth-child(odd) {
-        background-color: #ffffff !important;
-    }
-    /* Hover highlighting */
-    .shap-html-table tr:hover {
-        background-color: #f1f5f9 !important;
     }
 
-    /* Patient Info Card styling */
-    .patient-info-card {
-        background-color: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 12px !important;
-        padding: 2rem !important;
-        margin: 1.5rem 0 !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
-    }
-    
-    /* Input field spacing & aesthetics inside info card */
-    .patient-info-card div[data-testid="element-container"] {
-        margin-bottom: 1.25rem !important;
-    }
-    .patient-info-card div[data-testid="column"] {
-        padding: 0 1.25rem !important;
-    }
-    
-    /* Make input labels bold, dark slate, consistent font size */
-    .patient-info-card label, 
-    .patient-info-card [data-testid="stWidgetLabel"] p, 
-    .patient-info-card [data-testid="stWidgetLabel"] span {
-        color: #1e293b !important;
-        font-weight: bold !important;
-        font-size: 0.95rem !important;
-    }
-    
-    /* Add a small red asterisk (*) beside required fields */
-    .patient-info-card label[data-testid="stWidgetLabel"]::after, 
-    .patient-info-card [data-testid="stWidgetLabel"] p::after {
-        content: " *" !important;
-        color: #e74c3c !important;
-        font-weight: bold !important;
-        margin-left: 2px !important;
-    }
-    
-    /* Custom inputs style and focus glow border */
-    .patient-info-card input, 
-    .patient-info-card select, 
-    .patient-info-card div[role="combobox"] {
-        height: 42px !important;
-        border-radius: 8px !important;
-        border: 1px solid #cbd5e1 !important;
-        background-color: #ffffff !important;
-        color: #0f172a !important;
-        transition: border-color 0.2s, box-shadow 0.2s !important;
-    }
-    .patient-info-card input:focus, 
-    .patient-info-card select:focus, 
-    .patient-info-card div[role="combobox"]:focus-within {
-        border-color: #3b82f6 !important;
-        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15) !important;
-        outline: none !important;
-    }
-    
-    /* Section heading styling inside card */
-    .patient-info-card .sub-header {
-        font-size: 1.6rem !important;
-        font-weight: 700 !important;
-        color: #0f172a !important;
-        margin-top: 0 !important;
-        margin-bottom: 1.5rem !important;
-        border-bottom: 2px solid #cbd5e1 !important;
-        padding-bottom: 0.75rem !important;
-    }
-    
-    /* Performance Metric Cards styling */
-    .perf-card {
-        background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.05)) !important;
-        border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
-        border-radius: 12px !important;
-        padding: 1.25rem !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
-        transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    .footer-container {
         text-align: center !important;
-        margin-bottom: 1rem !important;
+        color: #64748b !important;
+        padding: 2.5rem 0 1rem 0 !important;
+        border-top: 1px solid #e2e8f0 !important;
+        margin-top: 3rem !important;
     }
-    
-    .perf-card:hover {
-        transform: translateY(-2px) !important;
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.08) !important;
-    }
-    
-    /* Left colored borders for cards */
-    .border-accuracy { border-left: 5px solid #06b6d4 !important; }
-    .border-cv { border-left: 5px solid #3b82f6 !important; }
-    .border-precision { border-left: 5px solid #8b5cf6 !important; }
-    .border-recall { border-left: 5px solid #f97316 !important; }
-    .border-f1 { border-left: 5px solid #6366f1 !important; }
-    .border-auc { border-left: 5px solid #f43f5e !important; }
-    
-    /* Metric Card Text */
-    .perf-label {
-        font-size: 0.85rem !important;
-        font-weight: 600 !important;
-        color: var(--text-color, #475569) !important;
-        opacity: 0.8;
-        text-transform: uppercase !important;
-        letter-spacing: 0.05em !important;
-        margin-bottom: 0.5rem !important;
-    }
-    
-    .perf-value {
-        font-size: 1.8rem !important;
-        font-weight: 700 !important;
-        color: var(--text-color, #0f172a) !important;
-        margin: 0 !important;
+    .footer-container p {
+        color: #64748b !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -908,23 +911,23 @@ def display_prediction_result(prediction, probability, user_inputs=None, best_mo
 
     # 1. Prediction Summary Dashboard Card
     st.markdown(f"""<div class="dashboard-card">
-<h4 style="margin: 0 0 1rem 0; font-weight: bold; color: var(--text-color, #1a252f);">📊 Prediction Summary Dashboard</h4>
+<h4 style="margin: 0 0 1rem 0; font-weight: bold; color: #0f172a;">📊 Prediction Summary Dashboard</h4>
 <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: space-between; align-items: center;">
 <div style="flex: 1; min-width: 150px;">
-<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">🏆 Best Model</p>
-<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color, #1a252f);">⚡ {best_model_name}</p>
+<p style="margin: 0; color: #64748b; font-size: 0.9rem;">🏆 Best Model</p>
+<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a;">⚡ {best_model_name}</p>
 </div>
 <div style="flex: 1; min-width: 150px;">
-<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Analysis Timestamp</p>
-<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color, #1a252f);">📅 {pred_time}</p>
+<p style="margin: 0; color: #64748b; font-size: 0.9rem;">Analysis Timestamp</p>
+<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a;">📅 {pred_time}</p>
 </div>
 <div style="flex: 1; min-width: 150px;">
-<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Risk Category</p>
+<p style="margin: 0; color: #64748b; font-size: 0.9rem;">Risk Category</p>
 <p style="margin: 0; font-size: 1.1rem; font-weight: bold;">{risk_badge}</p>
 </div>
 <div style="flex: 1; min-width: 150px;">
-<p style="margin: 0; color: #7f8c8d; font-size: 0.9rem;">Model Confidence</p>
-<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: var(--text-color, #1a252f);">🎯 {confidence:.2%}</p>
+<p style="margin: 0; color: #64748b; font-size: 0.9rem;">Model Confidence</p>
+<p style="margin: 0; font-size: 1.1rem; font-weight: bold; color: #0f172a;">🎯 {confidence:.2%}</p>
 </div>
 </div>
 </div>""", unsafe_allow_html=True)
@@ -2208,16 +2211,16 @@ def display_clinical_priority_list(user_inputs, importance_df=None):
             
             st.markdown(f"""<div class="dashboard-card" style="margin-bottom: 0.9rem; padding: 1.1rem; border-left: 5px solid {card_border_color};">
 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; margin-bottom: 0.4rem;">
-<h5 style="margin: 0; font-size: 1.05rem; font-weight: bold; color: var(--text-color, #1a252f);">{emoji} Priority {idx} — {item['display_name']}</h5>
+<h5 style="margin: 0; font-size: 1.05rem; font-weight: bold; color: #0f172a;">{emoji} Priority {idx} — {item['display_name']}</h5>
 <span style="font-size: 0.88rem; font-weight: bold; color: {item['status_color']};">Status: {item['status']}</span>
 </div>
-<p style="margin: 0 0 0.3rem 0; font-size: 0.95rem; color: var(--text-color, #4a5568);"><strong>Patient Value:</strong> <span style="color: #2b6cb0; font-weight: bold;">{item['val_str']}</span></p>
-<p style="margin: 0; font-size: 0.93rem; line-height: 1.5; color: var(--text-color, #2d3748);">{item['explanation']}</p>
+<p style="margin: 0 0 0.3rem 0; font-size: 0.95rem; color: #475569;"><strong>Patient Value:</strong> <span style="color: #0284c7; font-weight: bold;">{item['val_str']}</span></p>
+<p style="margin: 0; font-size: 0.93rem; line-height: 1.5; color: #334155;">{item['explanation']}</p>
 </div>""", unsafe_allow_html=True)
     else:
         # All normal case
         st.markdown("""<div class="success-box" style="padding: 1.25rem;">
-<p style="margin: 0; font-size: 1.05rem; font-weight: bold; color: #155724;">🟢 No major clinical priorities identified. Continue regular monitoring.</p>
+<p style="margin: 0; font-size: 1.05rem; font-weight: bold; color: #166534;">🟢 No major clinical priorities identified. Continue regular monitoring.</p>
 </div>""", unsafe_allow_html=True)
 
 
@@ -2248,16 +2251,16 @@ def display_ai_clinical_explanation(prediction, probability, user_inputs, import
         badge_style = "background-color: #e74c3c; color: white; padding: 4px 12px; border-radius: 5px; font-weight: bold;"
 
     st.markdown(f"""<div class="info-box" style="padding: 1.25rem; margin-bottom: 1.5rem;">
-<h4 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.15rem; font-weight: bold; color: var(--text-color, #1a252f);">📋 Prediction Summary</h4>
-<p style="margin: 0; font-size: 1.05rem; line-height: 1.6;">
+<h4 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.15rem; font-weight: bold; color: #075985;">📋 Prediction Summary</h4>
+<p style="margin: 0; font-size: 1.05rem; line-height: 1.6; color: #0c5460;">
 Based on your clinical information, the AI model predicts a <span style="{badge_style}">{risk_category}</span> of Diabetic Nephropathy with a risk probability of <strong>{prob_pct}</strong>.
 </p>
 </div>""", unsafe_allow_html=True)
 
     # 2. Personalized Health Recommendations (Replaces Why Did AI Make Prediction)
-    st.markdown("""<h4 style="font-weight: 600; color: var(--text-color, #1a252f); margin-top: 1.5rem; margin-bottom: 0.8rem;">💡 Personalized Health Recommendations</h4>""", unsafe_allow_html=True)
+    st.markdown("""<h4 style="font-weight: 600; color: #0f172a; margin-top: 1.5rem; margin-bottom: 0.8rem;">💡 Personalized Health Recommendations</h4>""", unsafe_allow_html=True)
     
-    st.markdown(f"""<p style="font-size: 1.02rem; margin-bottom: 1rem; color: var(--text-color, #1a252f);">
+    st.markdown(f"""<p style="font-size: 1.02rem; margin-bottom: 1rem; color: #0f172a;">
 <strong>Risk Status:</strong> <span style="{badge_style}">{risk_category}</span>
 </p>""", unsafe_allow_html=True)
 
@@ -2272,18 +2275,18 @@ Based on your clinical information, the AI model predicts a <span style="{badge_
             color = rec['color']
             
             st.markdown(f"""<div class="dashboard-card" style="margin-bottom: 1rem; padding: 1.1rem; border-left: 5px solid {color};">
-<h5 style="margin: 0 0 0.5rem 0; font-size: 1.05rem; font-weight: bold; color: var(--text-color, #1a252f);">{tag} — {title}</h5>
-<p style="margin: 0; font-size: 0.95rem; line-height: 1.6; color: var(--text-color, #2d3748);">{msg}</p>
+<h5 style="margin: 0 0 0.5rem 0; font-size: 1.05rem; font-weight: bold; color: #0f172a;">{tag} — {title}</h5>
+<p style="margin: 0; font-size: 0.95rem; line-height: 1.6; color: #334155;">{msg}</p>
 </div>""", unsafe_allow_html=True)
     else:
         # Patient with all normal indicators
         st.markdown("""<div class="success-box" style="padding: 1.25rem; margin-bottom: 1rem;">
-<h5 style="margin: 0 0 0.5rem 0; font-weight: bold; color: #155724;">🟢 Positive Indicator — Clinical Status</h5>
-<p style="margin: 0; font-size: 1.02rem; line-height: 1.6; color: #155724;">Your current clinical indicators do not show major areas requiring additional attention based on the entered values. Continue regular diabetes monitoring and a healthy lifestyle.</p>
+<h5 style="margin: 0 0 0.5rem 0; font-weight: bold; color: #166534;">🟢 Positive Indicator — Clinical Status</h5>
+<p style="margin: 0; font-size: 1.02rem; line-height: 1.6; color: #166534;">Your current clinical indicators do not show major areas requiring additional attention based on the entered values. Continue regular diabetes monitoring and a healthy lifestyle.</p>
 </div>""", unsafe_allow_html=True)
 
     # 3. Overall AI Assessment
-    st.markdown("""<h4 style="font-weight: 600; color: var(--text-color, #1a252f); margin-top: 2rem; margin-bottom: 1rem;">📊 Overall AI Assessment</h4>""", unsafe_allow_html=True)
+    st.markdown("""<h4 style="font-weight: 600; color: #0f172a; margin-top: 2rem; margin-bottom: 1rem;">📊 Overall AI Assessment</h4>""", unsafe_allow_html=True)
     
     if risk_category == "High Risk":
         assessment_text = f"Overall, the AI model predicts a <strong>High Risk</strong> of Diabetic Nephropathy with a probability of {prob_pct}. Key clinical factors require prompt medical attention and therapy optimization to mitigate kidney risk."
@@ -2292,17 +2295,17 @@ Based on your clinical information, the AI model predicts a <span style="{badge_
     else:
         assessment_text = f"Overall, the AI model predicts a <strong>Low Risk</strong> of Diabetic Nephropathy with a risk probability of {prob_pct}. Most of the evaluated clinical indicators fall within acceptable ranges. Continuing regular monitoring and maintaining a healthy lifestyle may help reduce future risk."
 
-    st.markdown(f"""<div class="dashboard-card" style="padding: 1.25rem; background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.03));">
-<p style="margin: 0; font-size: 1.02rem; line-height: 1.6; color: var(--text-color, #1a252f);">{assessment_text}</p>
+    st.markdown(f"""<div class="dashboard-card" style="padding: 1.25rem; background-color: #f8fafc;">
+<p style="margin: 0; font-size: 1.02rem; line-height: 1.6; color: #0f172a;">{assessment_text}</p>
 </div>""", unsafe_allow_html=True)
 
     # 4. Simple User-Friendly Explanation Note
-    st.markdown("""<div style="font-size: 0.9rem; color: var(--text-color, #7f8c8d); margin-top: 1rem; margin-bottom: 1.5rem; font-style: italic;">
+    st.markdown("""<div style="font-size: 0.9rem; color: #64748b; margin-top: 1rem; margin-bottom: 1.5rem; font-style: italic;">
 ℹ️ <strong>User-Friendly Guide:</strong> SHAP shows which clinical factors had the strongest influence on the AI model's prediction.
 </div>""", unsafe_allow_html=True)
 
     # 5. Medical Disclaimer
-    st.markdown("""<div style="font-size: 0.88rem; color: #7f8c8d; border-top: 1px solid #cbd5e1; padding-top: 0.8rem; margin-top: 1.5rem; font-style: italic; text-align: center;">
+    st.markdown("""<div style="font-size: 0.88rem; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 0.8rem; margin-top: 1.5rem; font-style: italic; text-align: center;">
 This AI explanation is generated using the model prediction and SHAP feature importance. It is intended for educational purposes only and should not replace professional medical advice.
 </div>""", unsafe_allow_html=True)
 
@@ -2311,15 +2314,25 @@ def main():
     """
     Main Streamlit application.
     """
-    # Header
-    st.markdown('<div class="main-header">🏥 Diabetic Nephropathy Prediction System</div>', 
-                unsafe_allow_html=True)
-    
-    st.markdown('<p style="text-align: center; font-size: 1.15rem; color: var(--text-color); opacity: 0.85; margin-top: -1.5rem; margin-bottom: 2rem;">Enter the patient\'s clinical information to assess the risk of diabetic nephropathy using the trained AI model.</p>', unsafe_allow_html=True)
+    # Header with left and right medical visuals
+    st.markdown(f"""
+    <div class="header-container" style="display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 0.5rem 0 0.5rem 0; margin-bottom: 1rem; flex-wrap: wrap;">
+        <div style="flex: 0 0 auto; text-align: left;" class="header-img-left">
+            <img src="{img_ml}" alt="Medical Visual Left" style="width: 210px; height: 135px; object-fit: cover; border-radius: 18px; box-shadow: 0 10px 25px rgba(2, 132, 199, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08); border: 2px solid #cbd5e1; opacity: 0.96; transition: transform 0.3s ease;">
+        </div>
+        <div style="flex: 1 1 300px; text-align: center;">
+            <div class="main-header" style="margin: 0 !important; padding: 0 !important; font-size: 2.5rem !important;">🏥 Diabetic Nephropathy Prediction System</div>
+            <p style="text-align: center; font-size: 1.05rem; color: #475569; margin-top: 0.4rem; margin-bottom: 0; line-height: 1.4;">Enter the patient's clinical information to assess the risk of diabetic nephropathy using the trained AI model.</p>
+        </div>
+        <div style="flex: 0 0 auto; text-align: right;" class="header-img-right">
+            <img src="{img_pred}" alt="Medical Visual Right" style="width: 210px; height: 135px; object-fit: cover; border-radius: 18px; box-shadow: 0 10px 25px rgba(2, 132, 199, 0.22), 0 4px 12px rgba(0, 0, 0, 0.08); border: 2px solid #cbd5e1; opacity: 0.96; transition: transform 0.3s ease;">
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("""<div class="info-box" style="padding: 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
 <span style="font-size: 1.25rem;">ℹ️</span>
-<p style="margin: 0; font-size: 1.02rem; line-height: 1.5;">This system uses machine learning to predict the risk of diabetic nephropathy based on clinical parameters. Enter patient information below to get a prediction with explainable AI insights.</p>
+<p style="margin: 0; font-size: 1.02rem; line-height: 1.5; color: #075985;">This system uses machine learning to predict the risk of diabetic nephropathy based on clinical parameters. Enter patient information below to get a prediction with explainable AI insights.</p>
 </div>""", unsafe_allow_html=True)
 
     # Load dynamically generated metrics and metadata
@@ -2329,42 +2342,40 @@ def main():
     # Sidebar - Model & Dataset Metadata
     st.sidebar.markdown('### 🏥 Model & Dataset Info')
     st.sidebar.markdown(f"""
-    <div style="background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.05)); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));">
-        <div style="margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)); padding-bottom: 0.3rem;">
-            <span style="color: var(--text-color); font-weight: bold; font-size: 0.95rem;">Model Status</span><br>
-            <span style="color: #2ecc71; font-weight: bold; font-size: 0.9rem;">🟢 {pipeline_data.get('model_status', 'Trained Successfully')}</span>
+    <div style="background-color: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="margin-bottom: 0.8rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3rem;">
+            <span style="color: #0f172a; font-weight: bold; font-size: 0.95rem;">Model Status</span><br>
+            <span style="color: #16a34a; font-weight: bold; font-size: 0.9rem;">🟢 {pipeline_data.get('model_status', 'Trained Successfully')}</span>
         </div>
-        <div style="margin-bottom: 0.8rem; border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)); padding-bottom: 0.3rem;">
-            <span style="color: var(--text-color); font-weight: bold; font-size: 0.95rem;">Explainability</span><br>
-            <span style="color: #3b82f6; font-weight: bold; font-size: 0.9rem;">⚡ {pipeline_data.get('explainability', 'SHAP Enabled')}</span>
+        <div style="margin-bottom: 0.8rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.3rem;">
+            <span style="color: #0f172a; font-weight: bold; font-size: 0.95rem;">Explainability</span><br>
+            <span style="color: #0284c7; font-weight: bold; font-size: 0.9rem;">⚡ {pipeline_data.get('explainability', 'SHAP Enabled')}</span>
         </div>
         <div style="margin-bottom: 0.8rem;">
-            <span style="color: var(--text-color); font-weight: bold; font-size: 0.95rem;">Model Architecture</span><br>
-            <span style="color: var(--text-color); font-size: 0.9rem; opacity: 0.95;">🤖 {best_model_name}</span>
+            <span style="color: #0f172a; font-weight: bold; font-size: 0.95rem;">Model Architecture</span><br>
+            <span style="color: #1e293b; font-size: 0.9rem;">🤖 {best_model_name}</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
     st.sidebar.markdown('### 📊 Dataset Details')
     st.sidebar.markdown(f"""
-    <div style="background-color: var(--background-color-secondary, rgba(255, 255, 255, 0.05)); padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));">
-        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
-            <span style="color: var(--text-color); opacity: 0.8;">Dataset Name</span>
-            <span style="color: var(--text-color); font-weight: bold; font-size: 0.8rem; text-align: right; display: block; word-break: break-all;">{pipeline_data.get('dataset_name', 'Diabetic_Nephropathy_v1.xlsx')}</span>
+    <div style="background-color: #f8fafc; padding: 1rem; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed #e2e8f0; font-size: 0.88rem;">
+            <span style="color: #475569;">Dataset Name</span>
+            <span style="color: #0f172a; font-weight: bold; font-size: 0.8rem; text-align: right; display: block; word-break: break-all;">{pipeline_data.get('dataset_name', 'Diabetic_Nephropathy_v1.xlsx')}</span>
         </div>
-        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
-            <span style="color: var(--text-color); opacity: 0.8;">Dataset Size</span>
-            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('dataset_size', 767)} samples</span>
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed #e2e8f0; font-size: 0.88rem;">
+            <span style="color: #475569;">Dataset Size</span>
+            <span style="color: #0f172a; font-weight: bold;">{pipeline_data.get('dataset_size', 767)} samples</span>
         </div>
-        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
-            <span style="color: var(--text-color); opacity: 0.8;">Features Count</span>
-            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('num_features', 21)} features</span>
+        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed #e2e8f0; font-size: 0.88rem;">
+            <span style="color: #475569;">Features Count</span>
+            <span style="color: #0f172a; font-weight: bold;">{pipeline_data.get('num_features', 21)} features</span>
         </div>
-        <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; border-bottom: 1px dashed var(--border-color, rgba(255, 255, 255, 0.1)); font-size: 0.88rem;">
-            <span style="color: var(--text-color); opacity: 0.8;">Training Set</span>
         <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.88rem;">
-            <span style="color: var(--text-color); opacity: 0.8;">Target Classes</span>
-            <span style="color: var(--text-color); font-weight: bold;">{pipeline_data.get('prediction_classes', 2)} classes</span>
+            <span style="color: #475569;">Target Classes</span>
+            <span style="color: #0f172a; font-weight: bold;">{pipeline_data.get('prediction_classes', 2)} classes</span>
         </div>
     </div>
     """, unsafe_allow_html=True)

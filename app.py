@@ -2330,11 +2330,6 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    st.markdown("""<div class="info-box" style="padding: 1.25rem; display: flex; align-items: flex-start; gap: 0.75rem;">
-<span style="font-size: 1.25rem;">ℹ️</span>
-<p style="margin: 0; font-size: 1.02rem; line-height: 1.5; color: #075985;">This system uses machine learning to predict the risk of diabetic nephropathy based on clinical parameters. Enter patient information below to get a prediction with explainable AI insights.</p>
-</div>""", unsafe_allow_html=True)
-
     # Load dynamically generated metrics and metadata
     pipeline_data = load_pipeline_metrics_and_metadata()
     best_model_name = pipeline_data.get('best_model', {}).get('name', 'XGBoost Classifier')
@@ -2376,104 +2371,6 @@ def main():
         <div style="display: flex; justify-content: space-between; padding: 0.4rem 0; font-size: 0.88rem;">
             <span style="color: #475569;">Target Classes</span>
             <span style="color: #0f172a; font-weight: bold;">{pipeline_data.get('prediction_classes', 2)} classes</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # Identify best model dynamically using priority: (1) Accuracy, (2) ROC-AUC, (3) F1
-    comparison_data = pipeline_data.get('comparison', {})
-    if comparison_data:
-        sorted_keys = sorted(
-            comparison_data.keys(),
-            key=lambda k: (
-                comparison_data[k].get('accuracy', 0.0),
-                comparison_data[k].get('roc_auc', 0.0),
-                comparison_data[k].get('f1', comparison_data[k].get('f1_score', 0.0))
-            ),
-            reverse=True
-        )
-        best_key = sorted_keys[0]
-        best_m = comparison_data[best_key]
-    else:
-        best_m = pipeline_data
-
-    best_model_name = best_m.get('model_name', pipeline_data.get('best_model', {}).get('name', 'Stacking Classifier'))
-    best_accuracy = best_m.get('accuracy', pipeline_data.get('accuracy', 0.8894))
-    best_cv_accuracy = best_m.get('cv_accuracy', pipeline_data.get('cv_accuracy', 0.9613))
-    best_precision = best_m.get('precision', pipeline_data.get('precision', 0.8894))
-    best_recall = best_m.get('recall', pipeline_data.get('recall', 0.8894))
-    best_f1 = best_m.get('f1', best_m.get('f1_score', pipeline_data.get('f1_score', 0.8894)))
-    best_roc_auc = best_m.get('roc_auc', pipeline_data.get('roc_auc', 0.9388))
-
-    # Top performance metrics section
-    st.markdown('<div class="sub-header">📈 Machine Learning Pipeline Metrics</div>', unsafe_allow_html=True)
-    
-    # 6 columns for metric cards
-    m_col1, m_col2, m_col3, m_col4, m_col5, m_col6 = st.columns(6)
-    
-    with m_col1:
-        st.markdown(f"""
-        <div class="perf-card border-accuracy">
-            <div class="perf-label">🎯 Accuracy</div>
-            <div class="perf-value">{best_accuracy:.2%}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with m_col2:
-        st.markdown(f"""
-        <div class="perf-card border-cv">
-            <div class="perf-label">🔄 CV Accuracy</div>
-            <div class="perf-value">{best_cv_accuracy:.2%}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with m_col3:
-        st.markdown(f"""
-        <div class="perf-card border-precision">
-            <div class="perf-label">📈 Precision</div>
-            <div class="perf-value">{best_precision:.2%}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with m_col4:
-        st.markdown(f"""
-        <div class="perf-card border-recall">
-            <div class="perf-label">📉 Recall</div>
-            <div class="perf-value">{best_recall:.2%}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with m_col5:
-        st.markdown(f"""
-        <div class="perf-card border-f1">
-            <div class="perf-label">🧬 F1 Score</div>
-            <div class="perf-value">{best_f1:.2%}</div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with m_col6:
-        st.markdown(f"""
-        <div class="perf-card border-auc">
-            <div class="perf-label">📊 ROC-AUC</div>
-            <div class="perf-value">{best_roc_auc:.2%}</div>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Display best model & short conclusion
-    st.markdown(f"""
-    <div class="shap-summary-card">
-        <h4 style="color: #0f172a; margin-top: 0; font-weight: bold;">🏆 Best Performing Model</h4>
-        <ul class="shap-summary-list">
-            <li><span class="shap-summary-label">Model Name:</span> <span class="shap-summary-value">{best_model_name}</span></li>
-            <li><span class="shap-summary-label">Accuracy:</span> <span class="shap-summary-value">{best_accuracy:.2%}</span></li>
-            <li><span class="shap-summary-label">ROC-AUC:</span> <span class="shap-summary-value">{best_roc_auc:.2%}</span></li>
-            <li><span class="shap-summary-label">F1 Score:</span> <span class="shap-summary-value">{best_f1:.2%}</span></li>
-        </ul>
-        <div style="margin-top: 1rem; padding-top: 0.8rem; border-top: 1px dashed #cbd5e1;">
-            <p style="margin: 0; color: #1e293b;">
-                <strong>Reason:</strong><br>
-                This model achieved the highest overall evaluation performance and is automatically selected as the final prediction model.
-            </p>
         </div>
     </div>
     """, unsafe_allow_html=True)

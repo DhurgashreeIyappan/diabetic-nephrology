@@ -8,7 +8,7 @@ TreeExplainer
 
 SHAP VALUES SHAPE:
 ------------------------------------------------------------
-(226, 21)
+(295, 21)
 
 GENERATED PLOTS:
 ------------------------------------------------------------
@@ -27,28 +27,28 @@ HbA1c (%): outputs\plots\shap_dependence_HbA1c_(%).png
 PATIENT EXPLANATION
 ============================================================
 
-Prediction: -7.5381
-Base Value: -0.2208
+Prediction: -9.8768
+Base Value: -0.1547
 
 TOP FEATURE CONTRIBUTIONS:
 ------------------------------------------------------------
-BMI (kg/m2): -2.2468 (Decreases)
-  Feature Value: 23.1405
-SBP (mmHg) : -1.7676 (Decreases)
-  Feature Value: 129.0000
-LDLC（mmoll）: 1.6930 (Increases)
-  Feature Value: 3.9500
-FBG (mmol/L): -1.3263 (Decreases)
-  Feature Value: 10.1800
-HDLC（mmoll）: -1.0205 (Decreases)
-  Feature Value: 1.1400
-Height(cm): 0.8668 (Increases)
-  Feature Value: 165.0000
-TC（mmoll）: -0.8650 (Decreases)
-  Feature Value: 5.5400
-Diabetic retinopathy (DR): -0.7051 (Decreases)
+Diabetic retinopathy (DR): -2.0661 (Decreases)
   Feature Value: 0.0000
-HbA1c (%): -0.6121 (Decreases)
-  Feature Value: 8.4000
-Metformin: -0.5615 (Decreases)
+TG（mmoll）: -1.9501 (Decreases)
+  Feature Value: 0.9996
+TC（mmoll）: -1.7435 (Decreases)
+  Feature Value: 6.5434
+HDLC（mmoll）: -1.4090 (Decreases)
+  Feature Value: 1.6184
+LDLC（mmoll）: 1.3802 (Increases)
+  Feature Value: 4.4960
+BMI (kg/m2): -1.2687 (Decreases)
+  Feature Value: 23.8854
+HbA1c (%): 1.1946 (Increases)
+  Feature Value: 10.4057
+Drinking: -0.7918 (Decreases)
   Feature Value: 1.0000
+Age: -0.7113 (Decreases)
+  Feature Value: 60.7723
+C-peptide (ng/ml）: -0.7036 (Decreases)
+  Feature Value: 0.9557

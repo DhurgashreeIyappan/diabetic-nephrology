@@ -4,20 +4,20 @@ MODEL EVALUATION REPORT
 
 WEIGHTED METRICS:
 ------------------------------------------------------------
-ACCURACY: 0.8894
-PRECISION: 0.8894
-RECALL: 0.8894
-F1_SCORE: 0.8894
+ACCURACY: 0.9424
+PRECISION: 0.9440
+RECALL: 0.9424
+F1_SCORE: 0.9423
 
 POSITIVE CLASS METRICS:
 ------------------------------------------------------------
-PRECISION_POSITIVE: 0.8929
-RECALL_POSITIVE: 0.8850
-F1_POSITIVE: 0.8889
+PRECISION_POSITIVE: 0.9167
+RECALL_POSITIVE: 0.9728
+F1_POSITIVE: 0.9439
 
 ROC-AUC:
 ------------------------------------------------------------
-ROC_AUC: 0.9456
+ROC_AUC: 0.9912
 
 ============================================================
 PLOTS:
